@@ -4,7 +4,7 @@ import { Reveal } from "@/components/site/reveal";
 
 export function Chapters() {
   return (
-    <section className="border-y border-foreground/8">
+    <section>
       <div className="mx-auto max-w-7xl px-5 py-20 md:px-8">
         <Reveal>
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">

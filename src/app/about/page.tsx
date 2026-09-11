@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { members, photos } from "@/lib/data";
+import { photos } from "@/lib/data";
+import { MemberList } from "@/components/site/member-list";
 import { PageIntro } from "@/components/site/page-intro";
 import { PhotoGallery } from "@/components/site/photo-gallery";
 import { Reveal } from "@/components/site/reveal";
@@ -69,16 +70,9 @@ export default function AboutPage() {
           </Reveal>
           <Reveal delay={0.1} className="lg:col-span-5">
             <p className="eyebrow">Desde 2024</p>
-            <ul className="mt-6 divide-y divide-foreground/10 border-y border-foreground/10">
-              {members.map((member) => (
-                <li key={member.name} className="flex items-baseline justify-between gap-4 py-5">
-                  <span className="font-display text-2xl">{member.name}</span>
-                  <span className="text-right text-sm text-muted-foreground">
-                    {member.role}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-6">
+              <MemberList />
+            </div>
           </Reveal>
         </div>
       </section>

@@ -23,10 +23,31 @@ export const nav = [
 ] as const;
 
 export const members = [
-  { name: "Julio César Lucero", role: "Guitarra y voz" },
-  { name: "Lucas Manzo", role: "Bajo" },
-  { name: "Federico Volpi", role: "Batería" },
-  { name: "Lucas Llull", role: "Teclado" },
+  {
+    name: "Julio César Lucero",
+    role: "Guitarra y voz",
+    image: "/images/vivo-lucero-perfil.jpg",
+    imagePosition: "center 20%",
+  },
+  {
+    name: "Lucas Manzo",
+    role: "Bajo",
+    image: "/images/vivo-manzo-bajo.jpg",
+    imagePosition: "center 20%",
+  },
+  {
+    name: "Federico Volpi",
+    role: "Batería",
+    image: "/images/band-campo.jpg",
+    imagePosition: "12% 30%",
+    imageScale: 2.1,
+  },
+  {
+    name: "Lucas Llull",
+    role: "Teclado",
+    image: "/images/band-perfiles.jpg",
+    imagePosition: "12% center",
+  },
 ] as const;
 
 export const photos = {
@@ -319,12 +340,67 @@ export function getAlbum(slug: string) {
 export const pressBio =
   "Cisne Elocuente es el proyecto de Julio César Lucero. Jazz rock porteño nacido en Almagro en 2014. Cuatro discos — Letárgico, Leda, Límpida y Luz cegadora — y una banda que recorre Argentina, Uruguay, Brasil y Chile. Formación estable desde 2024: Lucero, Lucas Manzo, Federico Volpi y Lucas Llull.";
 
-export const pressAssets = [
-  { label: "Logo", href: "/brand/cisne-elocuente.png" },
-  { label: "Banda — campo", href: "/images/band-campo.jpg" },
-  { label: "Banda — perfiles", href: "/images/band-perfiles.jpg" },
-  { label: "Banda — círculo", href: "/images/band-circulo.jpg" },
-  { label: "En vivo", href: "/images/vivo-lucero-escenario.jpg" },
+export const pressLogo = {
+  label: "Logo",
+  href: "/brand/cisne-elocuente.png",
+  alt: "Wordmark de Cisne Elocuente",
+} as const;
+
+export const pressPhotos = [
+  {
+    src: photos.hero,
+    alt: "Cisne Elocuente entre los pastos",
+    caption: "Campo",
+    note: "La formación, de pie. Foto de prensa.",
+  },
+  {
+    src: photos.band,
+    alt: "Los cuatro, de perfil",
+    caption: "Perfiles",
+    note: "Interior, luz de ventana.",
+  },
+  {
+    src: photos.circle,
+    alt: "La formación, vista desde arriba",
+    caption: "Círculo",
+    note: "Los cuatro, desde arriba.",
+  },
+  {
+    src: photos.circleLaugh,
+    alt: "La banda, riendo",
+    caption: "Círculo, risa",
+    note: "Misma toma, otro instante.",
+  },
+  {
+    src: photos.park,
+    alt: "En el pasto, con el perro",
+    caption: "Parque",
+    note: "Afuera, con el perro.",
+  },
+  {
+    src: photos.bandMirror,
+    alt: "La banda en el espejo",
+    caption: "Espejo",
+    note: "El cuarto, duplicado.",
+  },
+  {
+    src: "/images/vivo-lucero-humo.jpg",
+    alt: "Lucero en el escenario, humo azul",
+    caption: "Lucero · vivo",
+    note: "Guitarra y voz, en gira.",
+  },
+  {
+    src: "/images/vivo-lucero-escenario.jpg",
+    alt: "Lucero con cigarrillo y micrófono",
+    caption: "Escenario",
+    note: "Luz de sala.",
+  },
+  {
+    src: "/images/vivo-manzo-bajo.jpg",
+    alt: "Lucas Manzo en el bajo",
+    caption: "Manzo · bajo",
+    note: "En el escenario.",
+  },
 ] as const;
 
 export const riderInputs = [

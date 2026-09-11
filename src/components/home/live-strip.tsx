@@ -6,7 +6,7 @@ const live = gallery.filter((photo) => photo.src.includes("/vivo-"));
 
 export function LiveStrip() {
   return (
-    <section className="border-y border-foreground/8 py-16">
+    <section className="py-16">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <Reveal>
           <p className="eyebrow">En el escenario</p>
@@ -15,7 +15,7 @@ export function LiveStrip() {
           </h2>
         </Reveal>
       </div>
-      <div className="mt-10 flex gap-3 overflow-x-auto px-5 pb-2 snap-x snap-mandatory scrollbar-none md:px-8">
+      <div className="mt-10 flex gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pb-2 snap-x snap-mandatory scrollbar-none md:px-8">
         {live.map((photo) => (
           <figure
             key={photo.src}

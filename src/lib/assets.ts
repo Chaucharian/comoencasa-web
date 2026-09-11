@@ -4,6 +4,7 @@ import { albums, gallery, photos, products } from "@/lib/data";
 export const INTRO_TRACK = "/music/Apertura.mp3";
 
 export const HERO_IMAGE = photos.hero;
+export const HERO_VIDEO = "/videos/vid2.mp4";
 export const BAND_IMAGE = photos.band;
 
 const CRITICAL_IMAGES = [

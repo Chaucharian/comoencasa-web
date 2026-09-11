@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
-import { CustomCursor } from "@/components/site/custom-cursor";
-import { Footer } from "@/components/site/footer";
-import { GrainOverlay } from "@/components/site/grain-overlay";
-import { Header } from "@/components/site/header";
 import { Providers } from "@/components/site/providers";
+import { SiteShell } from "@/components/site/site-shell";
 import { SmoothScroll } from "@/components/site/smooth-scroll";
 import "./globals.css";
 
@@ -49,16 +46,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${display.variable} antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-svh flex-col">
         <Providers>
           <SmoothScroll>
-            <GrainOverlay />
-            <CustomCursor />
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <SiteShell>{children}</SiteShell>
           </SmoothScroll>
         </Providers>
       </body>

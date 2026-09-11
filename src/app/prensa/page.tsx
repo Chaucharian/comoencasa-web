@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import {
   band,
-  members,
-  pressAssets,
   pressBio,
+  pressLogo,
   riderBackline,
   riderDrums,
   riderInputs,
   riderMonitors,
 } from "@/lib/data";
 import { StagePlot } from "@/components/press/stage-plot";
+import { MemberList } from "@/components/site/member-list";
 import { PageIntro } from "@/components/site/page-intro";
 import { Reveal } from "@/components/site/reveal";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Prensa",
   description:
-    "Press kit y rider técnico de Cisne Elocuente. Bio, fotos, logo, escenario y canales.",
+    "Contacto, formación y rider técnico de Cisne Elocuente.",
 };
 
 function SpecList({
@@ -60,38 +61,27 @@ export default function PressPage() {
       <PageIntro
         chapter="Press kit"
         title="Prensa"
-        lede="Bio, fotos, logo y el rider. Lo que hace falta para programar, escribir o sonorizar a Cisne Elocuente."
+        lede="Contacto para notas y booking, y el armado de la banda en el escenario."
       />
 
       <section className="px-5 pb-20 md:px-8">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-12">
+        <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-12">
           <Reveal className="lg:col-span-7">
-            <p className="eyebrow">La banda</p>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground text-pretty">
+            <p className="eyebrow">Contacto</p>
+            <h2 className="mt-4 font-display text-4xl md:text-6xl">
+              Escribinos.
+            </h2>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
               {pressBio}
             </p>
-            <ul className="mt-10 divide-y divide-foreground/10 border-y border-foreground/10">
-              {members.map((member) => (
-                <li
-                  key={member.name}
-                  className="flex items-baseline justify-between gap-4 py-4"
-                >
-                  <span className="font-display text-2xl">{member.name}</span>
-                  <span className="text-sm text-muted-foreground">{member.role}</span>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
-          <Reveal delay={0.08} className="lg:col-span-5">
-            <p className="eyebrow">Contacto</p>
             <a
               href={`mailto:${band.email}`}
-              className="mt-6 block font-display text-3xl text-primary transition-colors hover:text-foreground md:text-4xl"
+              className="mt-8 block font-display text-3xl text-primary transition-colors hover:text-foreground md:text-5xl"
             >
               {band.email}
             </a>
             <p className="mt-4 text-sm text-muted-foreground">
-              Booking, prensa y rider. Almagro, Buenos Aires.
+              Prensa, booking y rider. Almagro, Buenos Aires.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild>
@@ -102,41 +92,38 @@ export default function PressPage() {
                   Spotify
                 </a>
               </Button>
+              <Button asChild variant="outline">
+                <a href={pressLogo.href} download="cisne-elocuente.png">
+                  Logo
+                </a>
+              </Button>
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      <section className="px-5 pb-20 md:px-8">
-        <div className="mx-auto max-w-7xl">
-          <Reveal>
-            <p className="eyebrow">Material</p>
-            <h2 className="mt-4 font-display text-4xl md:text-6xl">Descargas</h2>
+          <Reveal delay={0.08} className="lg:col-span-5">
+            <p className="eyebrow">El cuarteto</p>
+            <div className="mt-6">
+              <MemberList />
+            </div>
+            <div className="mt-10 flex items-center justify-center bg-ink py-10">
+              <Image
+                src={pressLogo.href}
+                alt={pressLogo.alt}
+                width={420}
+                height={160}
+                className="h-auto w-56"
+              />
+            </div>
           </Reveal>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {pressAssets.map((asset, index) => (
-              <Reveal key={asset.href} delay={index * 0.04}>
-                <a
-                  href={asset.href}
-                  download
-                  className="flex h-full items-center justify-between border border-foreground/12 px-4 py-5 transition-colors hover:border-primary hover:text-primary"
-                >
-                  <span className="font-display text-xl">{asset.label}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
-                    Bajar
-                  </span>
-                </a>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
       <section className="px-5 pb-16 md:px-8">
         <div className="mx-auto max-w-7xl">
           <Reveal>
-            <p className="eyebrow">Rider técnico</p>
-            <h2 className="mt-4 font-display text-4xl md:text-6xl">El escenario</h2>
+            <p className="eyebrow">Armado</p>
+            <h2 className="mt-4 font-display text-4xl md:text-6xl">
+              Cómo se planta la banda
+            </h2>
             <p className="mt-5 max-w-xl text-muted-foreground text-pretty">
               Cuarteto. Backline a cargo de la banda. Pistas por la PC.
               El plot es desde el público.

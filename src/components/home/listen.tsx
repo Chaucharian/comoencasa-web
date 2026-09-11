@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 
 export function Listen() {
   return (
-    <section className="px-5 py-24 md:px-8 md:py-32">
+    <section className="relative px-5 py-24 md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <p className="eyebrow">Plano verde paisaje · 2,5 millones</p>

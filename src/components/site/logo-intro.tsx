@@ -4,11 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useAmbientAudio } from "@/components/site/ambient-audio";
 import { BandLogo } from "@/components/site/band-logo";
+import { useIntro } from "@/components/site/intro-context";
 import { waitForAssets } from "@/lib/assets";
 
 export function LogoIntro() {
   const reduce = useReducedMotion();
   const { play } = useAmbientAudio();
+  const { beginIntro, endIntro } = useIntro();
+
+  useEffect(() => {
+    beginIntro();
+  }, [beginIntro]);
   const [assetsReady, setAssetsReady] = useState(false);
   const [phase, setPhase] = useState<"playing" | "leaving" | "gone">("playing");
   const enteringRef = useRef(false);
@@ -19,9 +25,6 @@ export function LogoIntro() {
   }, [play]);
 
   useEffect(() => {
-    const previous = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-
     let cancelled = false;
     waitForAssets().then(() => {
       if (!cancelled) setAssetsReady(true);
@@ -29,7 +32,6 @@ export function LogoIntro() {
 
     return () => {
       cancelled = true;
-      document.documentElement.style.overflow = previous;
     };
   }, []);
 
@@ -40,10 +42,8 @@ export function LogoIntro() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase === "gone") {
-      document.documentElement.style.overflow = "";
-    }
-  }, [phase]);
+    if (phase === "gone") endIntro();
+  }, [endIntro, phase]);
 
   const enter = useCallback(() => {
     if (enteringRef.current) return;
@@ -116,13 +116,15 @@ export function LogoIntro() {
           className="mx-auto w-full"
         />
       </div>
-      <button
-        type="button"
-        onClick={activate}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.32em] text-foreground/40 transition-colors hover:text-primary"
-      >
-        Scroll o Enter
-      </button>
+      {assetsReady ? (
+        <button
+          type="button"
+          onClick={activate}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.32em] text-foreground/40 transition-colors hover:text-primary"
+        >
+          Scroll o Enter
+        </button>
+      ) : null}
     </motion.div>
   );
 }

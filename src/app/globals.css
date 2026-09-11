@@ -67,19 +67,12 @@
 
   html {
     scroll-behavior: auto;
-  }
-
-  html.lenis,
-  html.lenis body {
     height: auto;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background-image:
-      radial-gradient(1100px 640px at 50% -12%, rgba(209, 18, 26, 0.14), transparent 55%),
-      radial-gradient(820px 420px at 100% 110%, rgba(209, 18, 26, 0.08), transparent 48%);
-    min-height: 100%;
+    min-height: 100svh;
   }
 
   ::selection {
@@ -117,6 +110,22 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+html.lenis,
+html.lenis body {
+  height: auto !important;
+}
+
+.atmosphere {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(70vw 46vh at 50% 8%, rgba(209, 18, 26, 0.16), transparent 62%),
+    radial-gradient(54vw 40vh at 88% 58%, rgba(209, 18, 26, 0.08), transparent 58%),
+    radial-gradient(48vw 36vh at 12% 88%, rgba(209, 18, 26, 0.07), transparent 55%);
 }
 
 .grain {

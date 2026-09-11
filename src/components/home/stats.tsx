@@ -3,7 +3,7 @@ import { Reveal } from "@/components/site/reveal";
 
 export function Stats() {
   return (
-    <section className="border-y border-foreground/8 px-5 py-14 md:px-8">
+    <section className="px-5 py-14 md:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <Reveal key={stat.label} delay={index * 0.06}>

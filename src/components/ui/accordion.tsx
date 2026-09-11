@@ -32,13 +32,13 @@ export function AccordionTrigger({
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         className={cn(
-          "flex flex-1 items-center justify-between gap-4 py-6 text-left transition-all hover:text-primary [&[data-state=open]>svg]:rotate-45",
+          "flex flex-1 items-center justify-between gap-4 py-6 text-left transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-primary [&[data-state=open]>svg]:rotate-45",
           className,
         )}
         {...props}
       >
         {children}
-        <Plus className="size-4 shrink-0 text-primary transition-transform duration-300" />
+        <Plus className="size-4 shrink-0 text-primary transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   );

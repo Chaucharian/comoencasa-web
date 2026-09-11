@@ -12,6 +12,7 @@ import {
 } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { INTRO_TRACK } from "@/lib/assets";
+import { useIntro } from "@/components/site/intro-context";
 import { Button } from "@/components/ui/button";
 
 type AmbientAudioContextValue = {
@@ -30,6 +31,7 @@ function hear(audio: HTMLAudioElement) {
 }
 
 export function AmbientAudioProvider({ children }: { children: ReactNode }) {
+  const { active: introActive } = useIntro();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
   const userMutedRef = useRef(false);
@@ -113,7 +115,7 @@ export function AmbientAudioProvider({ children }: { children: ReactNode }) {
         className="hidden"
       />
       {children}
-      {visible ? (
+      {visible && !introActive ? (
         <Button
           type="button"
           variant="outline"

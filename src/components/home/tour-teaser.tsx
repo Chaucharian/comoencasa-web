@@ -13,7 +13,7 @@ export async function TourTeaser() {
   }
 
   return (
-    <section className="border-y border-foreground/8 px-5 py-24 md:px-8 md:py-32">
+    <section className="relative px-5 py-24 md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
