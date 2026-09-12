@@ -1,7 +1,7 @@
 import { albums, gallery, photos, products } from "@/lib/data";
 
-// export const INTRO_TRACK = "/music/Arpegio.mp3";
 export const INTRO_TRACK = "/music/Apertura.mp3";
+export const CTA_TRACKS = ["/music/Arpegio.mp3", "/music/Arpegio2.mp3"] as const;
 
 export const HERO_IMAGE = photos.hero;
 export const HERO_VIDEO = "/videos/vid2.mp4";
@@ -51,6 +51,7 @@ export async function waitForAssets() {
     whenWindowLoaded(),
     document.fonts?.ready ?? Promise.resolve(),
     loadTrack(INTRO_TRACK),
+    ...CTA_TRACKS.map(loadTrack),
     ...[...new Set(CRITICAL_IMAGES)].map(loadImage),
   ]);
 }

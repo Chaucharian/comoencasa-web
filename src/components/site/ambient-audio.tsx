@@ -12,11 +12,13 @@ import {
 } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { INTRO_TRACK } from "@/lib/assets";
+import { playCtaSound, setCtaSoundMuted } from "@/lib/cta-sound";
 import { useIntro } from "@/components/site/intro-context";
 import { Button } from "@/components/ui/button";
 
 type AmbientAudioContextValue = {
   play: () => Promise<boolean>;
+  playCta: () => void;
   muted: boolean;
   playing: boolean;
   visible: boolean;
@@ -44,6 +46,7 @@ export function AmbientAudioProvider({ children }: { children: ReactNode }) {
     if (!audio) return false;
 
     userMutedRef.current = false;
+    setCtaSoundMuted(false);
     setMuted(false);
     hear(audio);
 
@@ -67,6 +70,10 @@ export function AmbientAudioProvider({ children }: { children: ReactNode }) {
       setVisible(true);
       return false;
     }
+  }, []);
+
+  const playCta = useCallback(() => {
+    playCtaSound();
   }, []);
 
   useEffect(() => {
@@ -95,14 +102,15 @@ export function AmbientAudioProvider({ children }: { children: ReactNode }) {
     setMuted((current) => {
       const next = !current;
       userMutedRef.current = next;
+      setCtaSoundMuted(next);
       if (audio) audio.muted = next;
       return next;
     });
   }, []);
 
   const value = useMemo(
-    () => ({ play, muted, playing, visible }),
-    [play, muted, playing, visible],
+    () => ({ play, playCta, muted, playing, visible }),
+    [play, playCta, muted, playing, visible],
   );
 
   return (

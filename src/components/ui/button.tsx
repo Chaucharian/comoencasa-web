@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { playCtaSound } from "@/lib/cta-sound";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -31,18 +34,25 @@ const buttonVariants = cva(
 
 export function Button({
   className,
-  variant,
-  size,
+  variant = "default",
+  size = "default",
   asChild = false,
+  onClick,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
+  const isCta = variant !== "ghost" && variant !== "link" && size !== "icon";
+
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      onClick={(event) => {
+        if (isCta) playCtaSound();
+        onClick?.(event);
+      }}
     />
   );
 }
