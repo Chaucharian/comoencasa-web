@@ -1,48 +1,26 @@
-import { products, type Product } from "@/lib/data";
+import { mkdir, readFile, rename, writeFile } from "fs/promises";
+import path from "path";
+import { parseStore } from "@/lib/menu";
+import type { Store } from "@/lib/types";
 
-export const storeSections = [
-  {
-    slug: "todo",
-    path: "/store",
-    category: null,
-    label: "Todo",
-    title: "Discos y objetos",
-    lede: "Discos, ropa y afiches.",
-  },
-  {
-    slug: "discos",
-    path: "/store/discos",
-    category: "vinyl",
-    label: "Discos",
-    title: "Discos",
-    lede: "Los cuatro LPs.",
-  },
-  {
-    slug: "ropa",
-    path: "/store/ropa",
-    category: "wear",
-    label: "Ropa",
-    title: "Ropa",
-    lede: "Remeras, buzos y gorras.",
-  },
-  {
-    slug: "objetos",
-    path: "/store/objetos",
-    category: "archive",
-    label: "Objetos",
-    title: "Objetos",
-    lede: "Afiches, tote y taza.",
-  },
-] as const;
+const directory = path.join(process.cwd(), "data");
+const file = path.join(directory, "store.json");
 
-export type StoreSection = (typeof storeSections)[number];
-
-export function getStoreSection(slug?: string): StoreSection | undefined {
-  if (!slug || slug === "todo") return storeSections[0];
-  return storeSections.find((section) => section.slug === slug);
+export async function readStore(): Promise<Store> {
+  try {
+    const raw = await readFile(file, "utf8");
+    return parseStore(JSON.parse(raw) as unknown);
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error("No se pudo leer la carta.");
+    throw error;
+  }
 }
 
-export function productsForSection(section: StoreSection): Product[] {
-  if (!section.category) return products;
-  return products.filter((item) => item.category === section.category);
+export async function writeStore(store: Store) {
+  const clean = parseStore(store);
+  await mkdir(directory, { recursive: true });
+  const tmp = `${file}.tmp`;
+  await writeFile(tmp, `${JSON.stringify(clean, null, 2)}\n`);
+  await rename(tmp, file);
+  return clean;
 }

@@ -1,60 +1,38 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
-import { Providers } from "@/components/site/providers";
-import { SiteShell } from "@/components/site/site-shell";
-import { SmoothScroll } from "@/components/site/smooth-scroll";
+import { Fraunces, Outfit } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sans = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const display = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-});
-
-const display = Cormorant_Garamond({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cisne.band"),
   title: {
-    default: "Cisne Elocuente — Jazz rock porteño",
-    template: "%s — Cisne Elocuente",
+    default: "Como en Casa — comida casera",
+    template: "%s — Como en Casa",
   },
   description:
-    "El proyecto de Julio César Lucero. Jazz rock porteño desde Almagro. Letárgico, Leda, Límpida y Luz cegadora.",
-  icons: {
-    icon: "/favicon.svg",
-  },
+    "Tartas, horno y platos del día para retirar o recibir en casa. El pedido se confirma por WhatsApp.",
+  icons: { icon: "/favicon.svg" },
   openGraph: {
-    title: "Cisne Elocuente — Jazz rock porteño",
-    description:
-      "Banda viajera de Buenos Aires. Cuatro discos. Plano verde paisaje, Ganapán, y gira 2026.",
-    type: "website",
+    title: "Como en Casa — comida casera",
+    description: "Pedí para retirar o delivery. Lo confirmamos por WhatsApp.",
     locale: "es_AR",
+    type: "website",
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${display.variable} antialiased`}
-    >
-      <body className="flex min-h-svh flex-col">
-        <Providers>
-          <SmoothScroll>
-            <SiteShell>{children}</SiteShell>
-          </SmoothScroll>
-        </Providers>
-      </body>
+    <html lang="es" className={`${sans.variable} ${display.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

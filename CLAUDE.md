@@ -1,6 +1,6 @@
-# Cisne Elocuente
+# Como en Casa
 
-Jazz rock porteño. Proyecto de Julio César Lucero. Contenido real en `src/lib/data.ts`.
+Carta de comida casera. Next.js, Tailwind v4. El pedido se confirma por WhatsApp. La carta editable está en `data/store.json` y en `/admin`.
 
 ```bash
 npm run dev

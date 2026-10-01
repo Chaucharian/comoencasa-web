@@ -1,0 +1,259 @@
+{
+  "name": "Como en Casa",
+  "tagline": "Comida casera para retirar o recibir en casa",
+  "cover": "/menu/hero.jpg",
+  "whatsapp": "5491112345678",
+  "address": "Parque Chacabuco, CABA",
+  "hours": "Martes a domingo · 11:30 a 15 y 19:30 a 22:30",
+  "about": "Cocinamos como en casa: tartas, horno y platos del día. El pedido se arma acá y se confirma por WhatsApp.",
+  "open": true,
+  "pickupEnabled": true,
+  "deliveryEnabled": true,
+  "deliveryFee": 2000,
+  "deliveryMin": 15000,
+  "paymentNote": "Efectivo o transferencia. El pago se coordina por WhatsApp.",
+  "categories": [
+    {
+      "id": "tartas",
+      "name": "Tartas",
+      "sort": 0
+    },
+    {
+      "id": "horno",
+      "name": "Al horno",
+      "sort": 1
+    },
+    {
+      "id": "platos",
+      "name": "Platos",
+      "sort": 2
+    },
+    {
+      "id": "acompanar",
+      "name": "Para acompañar",
+      "sort": 3
+    },
+    {
+      "id": "postres",
+      "name": "Postres",
+      "sort": 4
+    },
+    {
+      "id": "bebidas",
+      "name": "Bebidas",
+      "sort": 5
+    }
+  ],
+  "dishes": [
+    {
+      "id": "tarta-jamon",
+      "categoryId": "tartas",
+      "name": "Tarta de jamón y queso",
+      "description": "Masa casera, jamón cocido y mucha muzzarella. Porción.",
+      "price": 7500,
+      "image": "/menu/tarta-jamon.jpg",
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "tarta-acelga",
+      "categoryId": "tartas",
+      "name": "Tarta de acelga y ricota",
+      "description": "Acelga salteada, ricota y nuez moscada. Porción.",
+      "price": 7200,
+      "image": "/menu/tarta-acelga.jpg",
+      "available": true,
+      "sort": 1
+    },
+    {
+      "id": "tarta-atun",
+      "categoryId": "tartas",
+      "name": "Tarta de atún",
+      "description": "Atún, huevo duro, morrón y aceitunas. Porción.",
+      "price": 7800,
+      "image": "/menu/tarta-atun.jpg",
+      "available": true,
+      "sort": 2
+    },
+    {
+      "id": "tarta-entera",
+      "categoryId": "tartas",
+      "name": "Tarta de jamón y queso entera",
+      "description": "La misma tarta, entera, para cuatro. Viaja en el molde.",
+      "price": 24000,
+      "image": "/menu/tarta-entera.jpg",
+      "available": true,
+      "sort": 3
+    },
+    {
+      "id": "canelones",
+      "categoryId": "horno",
+      "name": "Canelones de ricota y espinaca",
+      "description": "Dos canelones con bechamel y salsa de tomate.",
+      "price": 9800,
+      "image": "/menu/canelones.jpg",
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "pastel-papa",
+      "categoryId": "horno",
+      "name": "Pastel de papa",
+      "description": "Carne picada, aceitunas, huevo y puré gratinado.",
+      "price": 10200,
+      "image": "/menu/pastel-papa.jpg",
+      "available": true,
+      "sort": 1
+    },
+    {
+      "id": "lasana",
+      "categoryId": "horno",
+      "name": "Lasaña de carne",
+      "description": "Capas de pasta, carne y bechamel, gratinada al horno.",
+      "price": 11000,
+      "image": "/menu/lasana.jpg",
+      "available": true,
+      "sort": 2
+    },
+    {
+      "id": "empanada",
+      "categoryId": "horno",
+      "name": "Empanada de carne",
+      "description": "Carne cortada a cuchillo, al horno. Unidad.",
+      "price": 1600,
+      "image": "/menu/empanadas.jpg",
+      "available": true,
+      "sort": 3
+    },
+    {
+      "id": "empanadas-docena",
+      "categoryId": "horno",
+      "name": "Docena de empanadas",
+      "description": "Doce empanadas de carne. Para la mesa.",
+      "price": 17000,
+      "image": "/menu/empanadas.jpg",
+      "available": true,
+      "sort": 4
+    },
+    {
+      "id": "pollo-crema",
+      "categoryId": "platos",
+      "name": "Pollo con crema",
+      "description": "Suprema en salsa de crema y champiñones, con puré.",
+      "price": 12500,
+      "image": "/menu/pollo-crema.jpg",
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "milanesa",
+      "categoryId": "platos",
+      "name": "Milanesa napolitana",
+      "description": "Con jamón, queso y salsa, más papas al horno.",
+      "price": 12800,
+      "image": "/menu/milanesa.jpg",
+      "available": true,
+      "sort": 1
+    },
+    {
+      "id": "carne-horno",
+      "categoryId": "platos",
+      "name": "Carne al horno con papas",
+      "description": "Tapa de asado desmechada, papas y zanahoria.",
+      "price": 13200,
+      "image": "/menu/carne-horno.jpg",
+      "available": true,
+      "sort": 2
+    },
+    {
+      "id": "pollo-disco",
+      "categoryId": "platos",
+      "name": "Pollo al disco",
+      "description": "Pollo, morrón, cebolla y papas. Porción abundante.",
+      "price": 12000,
+      "image": "/menu/pollo-disco.jpg",
+      "available": true,
+      "sort": 3
+    },
+    {
+      "id": "ensalada",
+      "categoryId": "acompanar",
+      "name": "Ensalada de la casa",
+      "description": "Lechuga, tomate, zanahoria y huevo.",
+      "price": 4800,
+      "image": "/menu/ensalada.jpg",
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "flan",
+      "categoryId": "postres",
+      "name": "Flan con dulce de leche",
+      "description": "Flan de huevo con caramelo y dulce de leche.",
+      "price": 4200,
+      "image": "/menu/flan.jpg",
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "budin",
+      "categoryId": "postres",
+      "name": "Budín de pan",
+      "description": "De pan viejo, con pasas y un hilo de crema.",
+      "price": 3900,
+      "image": "/menu/budin.jpg",
+      "available": true,
+      "sort": 1
+    },
+    {
+      "id": "torta-ricota",
+      "categoryId": "postres",
+      "name": "Torta de ricota",
+      "description": "Masa fina y relleno cremoso. Porción.",
+      "price": 4500,
+      "image": "/menu/torta-ricota.jpg",
+      "available": true,
+      "sort": 2
+    },
+    {
+      "id": "agua",
+      "categoryId": "bebidas",
+      "name": "Agua mineral",
+      "description": "Sin gas, 500 ml.",
+      "price": 2000,
+      "image": null,
+      "available": true,
+      "sort": 0
+    },
+    {
+      "id": "gaseosa",
+      "categoryId": "bebidas",
+      "name": "Gaseosa",
+      "description": "Línea cola, 500 ml.",
+      "price": 2800,
+      "image": null,
+      "available": true,
+      "sort": 1
+    },
+    {
+      "id": "limonada",
+      "categoryId": "bebidas",
+      "name": "Limonada de la casa",
+      "description": "Limón, menta y azúcar. Vaso.",
+      "price": 3500,
+      "image": null,
+      "available": true,
+      "sort": 2
+    },
+    {
+      "id": "vino",
+      "categoryId": "bebidas",
+      "name": "Vino de la casa",
+      "description": "Tinto de todos los días. Botella.",
+      "price": 8500,
+      "image": null,
+      "available": true,
+      "sort": 3
+    }
+  ]
+}

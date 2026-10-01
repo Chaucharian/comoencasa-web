@@ -1,23 +1,13 @@
-import { Chapters } from "@/components/home/chapters";
-import { Epilogue } from "@/components/home/epilogue";
-import { Hero } from "@/components/home/hero";
-import { Listen } from "@/components/home/listen";
-import { LiveStrip } from "@/components/home/live-strip";
-import { Myth } from "@/components/home/myth";
-import { StoreTeaser } from "@/components/home/store-teaser";
-import { TourTeaser } from "@/components/home/tour-teaser";
-import { Stats } from "@/components/home/stats";
+import { MenuApp } from "@/components/menu/menu-app";
+import { readStore } from "@/lib/store";
 
-export default function Home() {
-  return (
-    <>
-      <Hero />
-      <Chapters />
-      <Myth />
-      <StoreTeaser />
-      <LiveStrip />
-      <Listen />
-      <TourTeaser />
-    </>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const store = await readStore();
+  const menu = {
+    ...store,
+    dishes: store.dishes.filter((dish) => dish.available),
+  };
+  return <MenuApp store={menu} />;
 }
