@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { PackagingSticker } from "@/components/brand/packaging-sticker";
 import { SparkleStar } from "@/components/brand/brand-icons";
 import {
   Flame,
@@ -17,6 +16,7 @@ import {
   ShieldCheck,
   Check,
   ExternalLink,
+  Snowflake,
 } from "lucide-react";
 import type { Dish } from "@/lib/types";
 
@@ -67,27 +67,27 @@ export function DishShowcaseSection({
   return (
     <section
       id="platos-estrella"
-      className="w-full py-20 sm:py-28 bg-[#FFFDF2] border-t border-[#DFD8C4] relative overflow-hidden"
+      className="w-full py-16 sm:py-24 bg-[#FFFDF2] border-t border-[#DFD8C4] relative overflow-hidden"
     >
-      {/* Decorative background typography watermark */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none opacity-[0.03] whitespace-nowrap font-heading font-black text-[18vw] text-[#222421]">
+      {/* Decorative background watermark */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none opacity-[0.025] whitespace-nowrap font-heading font-black text-[18vw] text-[#222421]">
         {currentDish.name.split(" ")[0]}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 sm:mb-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 sm:mb-14">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8F9E4B]/15 text-[#668032] text-xs font-heading font-bold uppercase tracking-wider mb-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8F9E4B]/15 text-[#668032] text-xs font-heading font-bold uppercase tracking-wider mb-2.5">
               <Sparkles size={13} />
-              <span>Platos de Autor en Porción Individual</span>
+              <span>Platos de Autor envasados al vacío</span>
             </div>
-            <h2 className="font-heading font-black text-3xl sm:text-5xl text-[#222421] uppercase tracking-tight leading-tight">
+            <h2 className="font-heading font-black text-2xl sm:text-4xl md:text-5xl text-[#222421] uppercase tracking-tight leading-tight">
               Los Platos Estrella
             </h2>
-            <p className="font-sans text-base sm:text-lg text-[#5E4B3C] font-normal mt-2">
-              Cada plato se cocina por separado respetando sus tiempos exactos de cocción,
-              se sella con atmósfera modificada y viaja protegido con su sticker de autenticidad.
+            <p className="font-sans text-sm sm:text-base text-[#5E4B3C] font-normal mt-2">
+              Cada plato se cocina por separado respetando sus tiempos exactos de cocción tradicional,
+              se sella con atmósfera modificada y se regenera en tu casa en 8 a 10 minutos.
             </p>
           </div>
 
@@ -100,30 +100,30 @@ export function DishShowcaseSection({
               <button
                 onClick={prevDish}
                 type="button"
-                className="w-11 h-11 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-center text-[#222421] hover:bg-[#8F9E4B] hover:text-[#FFFDF2] hover:border-[#8F9E4B] transition-all shadow-xs"
+                className="w-10 h-10 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-center text-[#222421] hover:bg-[#8F9E4B] hover:text-[#FFFDF2] hover:border-[#8F9E4B] transition-all shadow-xs"
                 aria-label="Plato anterior"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
               </button>
               <button
                 onClick={nextDish}
                 type="button"
-                className="w-11 h-11 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-center text-[#222421] hover:bg-[#8F9E4B] hover:text-[#FFFDF2] hover:border-[#8F9E4B] transition-all shadow-xs"
+                className="w-10 h-10 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-center text-[#222421] hover:bg-[#8F9E4B] hover:text-[#FFFDF2] hover:border-[#8F9E4B] transition-all shadow-xs"
                 aria-label="Plato siguiente"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={18} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Dish Selector Thumbnails Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-10 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-8 scrollbar-none">
           {featuredDishes.map((dish, idx) => (
             <button
               key={dish.id}
               onClick={() => setSelectedIndex(idx)}
-              className={`px-4 py-2.5 rounded-full font-heading text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-4 py-2 rounded-full font-heading text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 border ${
                 selectedIndex === idx
                   ? "bg-[#222421] text-[#FFFDF2] border-[#222421] shadow-md scale-102"
                   : "bg-[#FFFFFF] text-[#222421]/80 border-[#DFD8C4] hover:border-[#8F9E4B] hover:bg-[#FFFDF2]"
@@ -141,70 +141,68 @@ export function DishShowcaseSection({
 
         {/* Featured Dish Showcase Hero Card */}
         <div className="rounded-3xl bg-[#FFFFFF] border border-[#DFD8C4] shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
-          {/* Left Column: Visual Packaging & Food Presentation (7 cols) */}
-          <div className="lg:col-span-7 bg-[#F7F4E6] p-6 sm:p-10 flex flex-col justify-between relative overflow-hidden min-h-[460px]">
-            {/* Top Badge */}
-            <div className="flex items-center justify-between z-10 mb-6">
+          {/* Left Column: Food Photography Presentation (6 cols) */}
+          <div className="lg:col-span-6 bg-[#F7F4E6] p-6 sm:p-10 flex flex-col justify-between relative overflow-hidden min-h-[380px] sm:min-h-[460px]">
+            {/* Top Badges */}
+            <div className="flex items-center justify-between z-10 mb-4">
               <span className="px-3 py-1 rounded-full bg-[#8F9E4B] text-[#FFFDF2] text-xs font-heading font-extrabold uppercase tracking-widest shadow-xs">
                 {currentDish.tag || "100% CASERO"}
               </span>
-              <span className="text-xs font-heading font-semibold text-[#5E4B3C] uppercase tracking-wider">
-                Sticker de Packaging Real
+              <span className="text-xs font-heading font-semibold text-[#5E4B3C] uppercase tracking-wider bg-[#FFFFFF]/75 backdrop-blur-xs px-2.5 py-1 rounded-full border border-[#DFD8C4]/60">
+                Envasado al Vacío
               </span>
             </div>
 
-            {/* Visual Center: Interactive Packaging Sticker & Food Photo side-by-side / overlay */}
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 my-auto py-4">
-              {/* Dish Photo with Plate styling */}
-              {currentDish.image && (
-                <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden shadow-2xl border-4 border-[#FFFFFF] shrink-0 group">
-                  <Image
-                    src={currentDish.image}
-                    alt={currentDish.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 640px) 224px, 256px"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#222421]/40 via-transparent to-transparent pointer-events-none" />
+            {/* Large Cinematic Food Photography */}
+            <div className="relative z-10 w-full h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden shadow-lg border border-[#DFD8C4] my-auto group">
+              {currentDish.image ? (
+                <Image
+                  src={currentDish.image}
+                  alt={currentDish.name}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-[#F4EFE3] text-[#5E4B3C] font-heading font-bold uppercase">
+                  abrí y serví
                 </div>
               )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#222421]/60 via-transparent to-transparent pointer-events-none" />
 
-              {/* The Official Interactive Packaging Sticker */}
-              <div className="flex flex-col items-center">
-                <PackagingSticker
-                  dish={currentDish}
-                  size={260}
-                  interactive={true}
-                  className="shadow-2xl hover:scale-105 transition-transform duration-300"
-                />
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[#5E4B3C] mt-3 font-heading opacity-75">
-                  ✦ Pasá el mouse para inclinar ✦
+              {/* Bottom Badge inside photo */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                <span className="text-xs font-heading font-bold uppercase text-[#FFFDF2] bg-[#222421]/70 backdrop-blur-md px-3 py-1 rounded-full">
+                  ⏱️ {currentDish.regenTime || "8-10 min"} en agua
+                </span>
+                <span className="text-xs font-heading font-bold uppercase text-[#FFFDF2] bg-[#8F9E4B] px-3 py-1 rounded-full shadow-xs">
+                  ⚖️ {currentDish.weight || "450g"}
                 </span>
               </div>
             </div>
 
             {/* Video preview pill if available */}
             {currentDish.video && (
-              <div className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs font-heading font-bold text-[#668032] bg-[#FFFFFF]/80 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-[#DFD8C4] self-start shadow-2xs">
+              <div className="relative z-10 mt-4 inline-flex items-center gap-2 text-xs font-heading font-bold text-[#668032] bg-[#FFFFFF]/90 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-[#DFD8C4] self-start shadow-2xs">
                 <Flame size={14} className="text-[#8F9E4B]" />
-                <span>Video de preparación en agua disponible</span>
+                <span>Video de preparación al baño maría disponible</span>
               </div>
             )}
           </div>
 
-          {/* Right Column: Culinary Details & Instant Order (5 cols) */}
-          <div className="lg:col-span-5 p-6 sm:p-10 flex flex-col justify-between bg-[#FFFFFF]">
+          {/* Right Column: Culinary Details & Instant Order (6 cols) */}
+          <div className="lg:col-span-6 p-6 sm:p-10 flex flex-col justify-between bg-[#FFFFFF]">
             <div>
-              {/* Category & Status */}
-              <div className="flex items-center gap-2 mb-2">
+              {/* Category */}
+              <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-xs font-heading font-bold uppercase tracking-wider text-[#8F9E4B]">
-                  Porción Envasada al Vacío
+                  Listo para regenerar en 8 min
                 </span>
               </div>
 
               {/* Main Dish Name */}
-              <h3 className="font-heading font-black text-2xl sm:text-4xl text-[#222421] uppercase tracking-tight leading-tight mb-4">
+              <h3 className="font-heading font-black text-2xl sm:text-3xl md:text-4xl text-[#222421] uppercase tracking-tight leading-tight mb-3">
                 {currentDish.name}
               </h3>
 
@@ -214,21 +212,21 @@ export function DishShowcaseSection({
                   <p className="font-heading font-bold text-xs uppercase tracking-wider text-[#5E4B3C] mb-1">
                     El Secreto del Cocinero:
                   </p>
-                  <p className="font-sans text-sm text-[#222421]/90 italic">
+                  <p className="font-sans text-xs sm:text-sm text-[#222421]/90 italic leading-relaxed">
                     &ldquo;{currentDish.highlight}&rdquo;
                   </p>
                 </div>
               )}
 
               {/* Full Description */}
-              <p className="font-sans text-sm sm:text-base text-[#222421]/80 leading-relaxed mb-6">
+              <p className="font-sans text-xs sm:text-sm text-[#222421]/80 leading-relaxed mb-6">
                 {currentDish.description}
               </p>
 
               {/* Technical Specifications Passport */}
-              <div className="grid grid-cols-2 gap-3 mb-8 pt-4 border-t border-[#DFD8C4]/60">
-                <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
-                  <Clock size={18} className="text-[#8F9E4B] shrink-0" />
+              <div className="grid grid-cols-2 gap-2.5 mb-6 pt-4 border-t border-[#DFD8C4]/60">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <Clock size={16} className="text-[#8F9E4B] shrink-0" />
                   <div className="leading-tight">
                     <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
                       Tiempo Olla
@@ -239,11 +237,11 @@ export function DishShowcaseSection({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
-                  <Scale size={18} className="text-[#8F9E4B] shrink-0" />
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <Scale size={16} className="text-[#8F9E4B] shrink-0" />
                   <div className="leading-tight">
                     <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
-                      Peso Neto
+                      Peso Porción
                     </span>
                     <span className="text-xs font-bold text-[#222421] font-heading">
                       {currentDish.weight || "450g"}
@@ -251,14 +249,26 @@ export function DishShowcaseSection({
                   </div>
                 </div>
 
-                <div className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
-                  <ShieldCheck size={18} className="text-[#668032] shrink-0" />
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <Snowflake size={16} className="text-[#5E4B3C] shrink-0" />
                   <div className="leading-tight">
                     <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
-                      Método recomendado
+                      Conservación
                     </span>
                     <span className="text-xs font-semibold text-[#222421] font-sans">
-                      {currentDish.method || "Herví la bolsa sin abrir en agua a 100°C"}
+                      7 días frío / 3 meses freezer
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <ShieldCheck size={16} className="text-[#668032] shrink-0" />
+                  <div className="leading-tight">
+                    <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
+                      Garantía
+                    </span>
+                    <span className="text-xs font-semibold text-[#222421] font-sans">
+                      0% Conservantes
                     </span>
                   </div>
                 </div>
@@ -266,13 +276,13 @@ export function DishShowcaseSection({
             </div>
 
             {/* Bottom Pricing & Order Action Bar */}
-            <div className="pt-6 border-t border-[#DFD8C4]">
+            <div className="pt-5 border-t border-[#DFD8C4]">
               <div className="flex items-baseline justify-between mb-4">
                 <div>
-                  <span className="text-[11px] uppercase font-bold text-[#5E4B3C] font-heading block">
+                  <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
                     Precio por porción
                   </span>
-                  <span className="font-heading font-black text-3xl sm:text-4xl text-[#222421]">
+                  <span className="font-heading font-black text-2xl sm:text-3xl text-[#222421]">
                     ${currentDish.price.toLocaleString("es-AR")}
                   </span>
                 </div>
@@ -284,9 +294,9 @@ export function DishShowcaseSection({
                     className="w-8 h-8 rounded-full flex items-center justify-center text-[#222421] hover:bg-[#FFFFFF] active:scale-95 transition-all"
                     aria-label="Restar una porción"
                   >
-                    <Minus size={14} />
+                    <Minus size={13} />
                   </button>
-                  <span className="w-9 text-center font-heading font-black text-sm text-[#222421]">
+                  <span className="w-8 text-center font-heading font-black text-sm text-[#222421]">
                     {currentQty}
                   </span>
                   <button
@@ -294,7 +304,7 @@ export function DishShowcaseSection({
                     className="w-8 h-8 rounded-full flex items-center justify-center text-[#222421] hover:bg-[#FFFFFF] active:scale-95 transition-all"
                     aria-label="Sumar una porción"
                   >
-                    <Plus size={14} />
+                    <Plus size={13} />
                   </button>
                 </div>
               </div>
@@ -303,9 +313,9 @@ export function DishShowcaseSection({
               <button
                 onClick={handleAdd}
                 type="button"
-                className="w-full py-4 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-black text-sm uppercase tracking-wider hover:bg-[#7D8B3F] active:scale-98 transition-all shadow-md flex items-center justify-center gap-2 mb-2"
+                className="w-full py-3.5 sm:py-4 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-black text-xs sm:text-sm uppercase tracking-wider hover:bg-[#7D8B3F] active:scale-98 transition-all shadow-md flex items-center justify-center gap-2 mb-2"
               >
-                <ShoppingBag size={18} />
+                <ShoppingBag size={17} />
                 <span>
                   Agregar {currentQty} al pedido • ${(currentDish.price * currentQty).toLocaleString("es-AR")}
                 </span>
@@ -318,7 +328,7 @@ export function DishShowcaseSection({
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 rounded-full text-center text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C] hover:text-[#222421] hover:bg-[#FFFDF2] transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-2 rounded-full text-center text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C] hover:text-[#222421] hover:bg-[#FFFDF2] transition-colors flex items-center justify-center gap-1.5"
               >
                 <span>Pedir directo por WhatsApp</span>
                 <ExternalLink size={12} />

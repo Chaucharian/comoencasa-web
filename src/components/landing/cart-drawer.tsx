@@ -8,9 +8,6 @@ import {
   Trash2,
   ShoppingBag,
   Send,
-  MapPin,
-  Clock,
-  DollarSign,
   AlertCircle,
   Truck,
   Store,
@@ -104,17 +101,17 @@ export function CartDrawer({
         className="absolute inset-0 bg-[#222421]/60 backdrop-blur-xs transition-opacity"
       />
 
-      {/* Drawer Container */}
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-[#FFFDF2] border-l border-[#DFD8C4] shadow-2xl flex flex-col justify-between">
+      {/* Drawer Container: Full width on mobile, max-w-md on desktop with zero side cutoffs */}
+      <div className="fixed inset-y-0 right-0 w-full sm:max-w-md flex z-50">
+        <div className="w-full h-full bg-[#FFFDF2] border-l border-[#DFD8C4] shadow-2xl flex flex-col justify-between overflow-hidden">
           {/* Drawer Header */}
-          <div className="p-5 sm:p-6 border-b border-[#DFD8C4] flex items-center justify-between bg-[#FFFFFF]">
+          <div className="p-4 sm:p-5 border-b border-[#DFD8C4] flex items-center justify-between bg-[#FFFFFF] shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-[#8F9E4B] flex items-center justify-center text-[#FFFDF2]">
+              <div className="w-9 h-9 rounded-full bg-[#8F9E4B] flex items-center justify-center text-[#FFFDF2] shrink-0">
                 <ShoppingBag size={18} />
               </div>
               <div>
-                <h3 className="font-heading font-black text-lg text-[#222421] uppercase tracking-wide">
+                <h3 className="font-heading font-black text-base sm:text-lg text-[#222421] uppercase tracking-wide leading-tight">
                   Tu Pedido
                 </h3>
                 <span className="text-[11px] text-[#5E4B3C] font-heading font-semibold uppercase">
@@ -125,7 +122,7 @@ export function CartDrawer({
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-[#F4EFE3] hover:bg-[#DFD8C4] flex items-center justify-center text-[#222421] transition-colors"
+              className="w-9 h-9 rounded-full bg-[#F4EFE3] hover:bg-[#DFD8C4] flex items-center justify-center text-[#222421] transition-colors shrink-0"
               aria-label="Cerrar pedido"
             >
               <X size={18} />
@@ -133,7 +130,7 @@ export function CartDrawer({
           </div>
 
           {/* Drawer Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
             {cart.length === 0 ? (
               <div className="text-center py-16 flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-[#F4EFE3] flex items-center justify-center text-[#5E4B3C] mb-4">
@@ -149,14 +146,14 @@ export function CartDrawer({
             ) : (
               <>
                 {/* Cart Lines List */}
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {cart.map((line) => (
                     <div
                       key={line.lineId}
-                      className="p-3.5 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-between gap-3 shadow-2xs"
+                      className="p-3 sm:p-3.5 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4] flex items-center justify-between gap-2 shadow-2xs"
                     >
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-heading font-bold text-xs sm:text-sm text-[#222421] uppercase tracking-wide truncate">
+                      <div className="flex-1 min-w-0 pr-1">
+                        <h4 className="font-heading font-bold text-xs sm:text-sm text-[#222421] uppercase tracking-wide truncate leading-snug">
                           {line.name}
                         </h4>
                         <span className="text-[11px] font-heading font-semibold text-[#5E4B3C]">
@@ -165,7 +162,7 @@ export function CartDrawer({
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => onUpdateQty(line.lineId, line.qty - 1)}
                           className="w-7 h-7 rounded-full bg-[#F4EFE3] hover:bg-[#DFD8C4] flex items-center justify-center text-[#222421] transition-colors"
@@ -173,7 +170,7 @@ export function CartDrawer({
                         >
                           {line.qty === 1 ? <Trash2 size={12} className="text-[#B93826]" /> : <Minus size={12} />}
                         </button>
-                        <span className="w-6 text-center font-heading font-bold text-xs text-[#222421]">
+                        <span className="w-5 text-center font-heading font-bold text-xs text-[#222421]">
                           {line.qty}
                         </span>
                         <button
@@ -185,8 +182,8 @@ export function CartDrawer({
                         </button>
                       </div>
 
-                      <div className="text-right shrink-0 min-w-16">
-                        <span className="font-heading font-black text-xs sm:text-sm text-[#222421]">
+                      <div className="text-right shrink-0 pl-1 min-w-[70px]">
+                        <span className="font-heading font-black text-xs sm:text-sm text-[#222421] whitespace-nowrap">
                           ${(line.price * line.qty).toLocaleString("es-AR")}
                         </span>
                       </div>
@@ -195,7 +192,7 @@ export function CartDrawer({
                 </div>
 
                 {/* Delivery vs Pickup Toggle */}
-                <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4]">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4]">
                   <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block mb-2">
                     Forma de Entrega
                   </span>
@@ -203,26 +200,26 @@ export function CartDrawer({
                     <button
                       type="button"
                       onClick={() => setFulfillment("delivery")}
-                      className={`p-2.5 rounded-xl font-heading text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border transition-all ${
+                      className={`py-2 px-2.5 rounded-xl font-heading text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all ${
                         fulfillment === "delivery"
                           ? "bg-[#8F9E4B] text-[#FFFDF2] border-[#8F9E4B] shadow-xs"
                           : "bg-[#FFFDF2] text-[#222421] border-[#DFD8C4]"
                       }`}
                     >
-                      <Truck size={14} />
-                      <span>Envío ($2.000)</span>
+                      <Truck size={13} className="shrink-0" />
+                      <span className="truncate">Envío ($2.000)</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFulfillment("pickup")}
-                      className={`p-2.5 rounded-xl font-heading text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border transition-all ${
+                      className={`py-2 px-2.5 rounded-xl font-heading text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all ${
                         fulfillment === "pickup"
                           ? "bg-[#8F9E4B] text-[#FFFDF2] border-[#8F9E4B] shadow-xs"
                           : "bg-[#FFFDF2] text-[#222421] border-[#DFD8C4]"
                       }`}
                     >
-                      <Store size={14} />
-                      <span>Retiro Gratis</span>
+                      <Store size={13} className="shrink-0" />
+                      <span className="truncate">Retiro Gratis</span>
                     </button>
                   </div>
 
@@ -238,7 +235,7 @@ export function CartDrawer({
                 </div>
 
                 {/* Customer Details Form */}
-                <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4] space-y-3">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FFFFFF] border border-[#DFD8C4] space-y-3">
                   <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
                     Tus Datos para el Pedido
                   </span>
@@ -332,25 +329,25 @@ export function CartDrawer({
 
           {/* Drawer Footer Checkout Button */}
           {cart.length > 0 && (
-            <div className="p-5 sm:p-6 border-t border-[#DFD8C4] bg-[#FFFFFF] space-y-3">
+            <div className="p-4 sm:p-5 border-t border-[#DFD8C4] bg-[#FFFFFF] space-y-3 shrink-0">
               <div className="space-y-1 text-xs font-sans text-[#5E4B3C]">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Subtotal comida</span>
-                  <span className="font-heading font-bold text-[#222421]">
+                  <span className="font-heading font-bold text-[#222421] whitespace-nowrap">
                     ${subtotal.toLocaleString("es-AR")}
                   </span>
                 </div>
                 {fulfillment === "delivery" && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span>Costo de envío</span>
-                    <span className="font-heading font-bold text-[#222421]">
+                    <span className="font-heading font-bold text-[#222421] whitespace-nowrap">
                       ${deliveryFee.toLocaleString("es-AR")}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between text-base font-heading font-black text-[#222421] pt-2 border-t border-[#DFD8C4]">
+                <div className="flex justify-between items-center text-sm sm:text-base font-heading font-black text-[#222421] pt-2 border-t border-[#DFD8C4]">
                   <span>TOTAL FINAL</span>
-                  <span>${total.toLocaleString("es-AR")}</span>
+                  <span className="whitespace-nowrap">${total.toLocaleString("es-AR")}</span>
                 </div>
               </div>
 
@@ -358,13 +355,13 @@ export function CartDrawer({
                 onClick={handleSendWhatsApp}
                 type="button"
                 disabled={isBelowDeliveryMin}
-                className={`w-full py-4 rounded-full font-heading font-black text-sm uppercase tracking-wider shadow-md flex items-center justify-center gap-2 transition-all ${
+                className={`w-full py-3.5 sm:py-4 rounded-full font-heading font-black text-xs sm:text-sm uppercase tracking-wider shadow-md flex items-center justify-center gap-2 transition-all ${
                   isBelowDeliveryMin
                     ? "bg-[#DFD8C4] text-[#5E4B3C] cursor-not-allowed"
                     : "bg-[#668032] hover:bg-[#576D2B] text-[#FFFDF2] active:scale-98"
                 }`}
               >
-                <Send size={16} />
+                <Send size={15} />
                 <span>Confirmar por WhatsApp</span>
               </button>
             </div>

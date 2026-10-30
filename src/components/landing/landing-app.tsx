@@ -102,11 +102,8 @@ export function LandingApp({ store }: LandingAppProps) {
         whatsappNumber={store.whatsapp}
       />
 
-      {/* Hero Section with Video */}
+      {/* Hero Section with Sticky Video & Scroll-driven 3-Step Walkthrough */}
       <HeroSection />
-
-      {/* 3 Step Regeneration Ritual */}
-      <MethodSection />
 
       {/* Individual Dish Showcase Section ("vendiéndote cada plato") */}
       <DishShowcaseSection

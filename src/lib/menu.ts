@@ -20,6 +20,8 @@ export const FOOD_IMAGES = [
   "/menu/pollo-crema.jpg",
   "/menu/milanesa.jpg",
   "/menu/carne-horno.jpg",
+  "/menu/bondiola.jpg",
+  "/menu/osobuco.jpg",
   "/menu/pollo-disco.jpg",
   "/menu/ensalada.jpg",
   "/menu/flan.jpg",

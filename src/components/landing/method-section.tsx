@@ -59,7 +59,10 @@ export function MethodSection() {
           {steps.map((step, idx) => (
             <div
               key={step.num}
-              className="relative rounded-2xl bg-[#FFFFFF] p-7 sm:p-8 shadow-sm border border-[#DFD8C4] hover:shadow-md hover:border-[#8F9E4B]/50 transition-all group flex flex-col justify-between"
+              id={idx === 2 ? "metodo-paso-3" : undefined}
+              className={`relative rounded-2xl bg-[#FFFFFF] p-7 sm:p-8 shadow-sm border border-[#DFD8C4] hover:shadow-md hover:border-[#8F9E4B]/50 transition-all group flex flex-col justify-between ${
+                idx === 2 ? "scroll-mt-28" : ""
+              }`}
             >
               {/* Step counter badge */}
               <div className="flex items-center justify-between mb-6">

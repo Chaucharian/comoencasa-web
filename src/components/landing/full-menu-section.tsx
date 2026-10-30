@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
-import { PackagingSticker } from "@/components/brand/packaging-sticker";
 import {
   Search,
   Plus,
@@ -12,6 +11,8 @@ import {
   ShoppingBag,
   X,
   Check,
+  ShieldCheck,
+  Flame,
 } from "lucide-react";
 import type { Category, Dish } from "@/lib/types";
 
@@ -260,27 +261,80 @@ export function FullMenuSection({
 
             {/* Modal Body */}
             <div className="p-6 sm:p-8 overflow-y-auto">
-              <div className="flex flex-col items-center text-center mb-6">
-                <span className="text-xs font-heading font-bold uppercase tracking-wider text-[#8F9E4B] mb-1">
-                  Inspección de Packaging al Vacío
+              {/* Photo & Header */}
+              {inspectedDish.image && (
+                <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden mb-6 border border-[#DFD8C4] shadow-md">
+                  <Image
+                    src={inspectedDish.image}
+                    alt={inspectedDish.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, 600px"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#222421]/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[#FFFDF2]">
+                    <span className="text-xs font-heading font-bold uppercase bg-[#8F9E4B] px-3 py-1 rounded-full shadow-xs">
+                      {inspectedDish.tag || "100% CASERO"}
+                    </span>
+                    {inspectedDish.weight && (
+                      <span className="text-xs font-heading font-bold uppercase bg-[#222421]/80 backdrop-blur-xs px-2.5 py-1 rounded-full">
+                        ⚖️ {inspectedDish.weight}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-left mb-4">
+                <span className="text-xs font-heading font-bold uppercase tracking-wider text-[#8F9E4B] mb-1 block">
+                  Porción Envasada al Vacío
                 </span>
                 <h3 className="font-heading font-black text-2xl sm:text-3xl text-[#222421] uppercase tracking-tight">
                   {inspectedDish.name}
                 </h3>
               </div>
 
-              {/* Central Sticker Presentation */}
-              <div className="py-4 flex justify-center bg-[#F7F4E6] rounded-2xl p-6 border border-[#DFD8C4] mb-6">
-                <PackagingSticker
-                  dish={inspectedDish}
-                  size={290}
-                  interactive={true}
-                />
-              </div>
+              {inspectedDish.highlight && (
+                <div className="p-3.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4] mb-4">
+                  <p className="font-heading font-bold text-xs uppercase text-[#5E4B3C] mb-0.5">
+                    Detalle del plato:
+                  </p>
+                  <p className="font-sans text-xs sm:text-sm text-[#222421]/90 italic">
+                    &ldquo;{inspectedDish.highlight}&rdquo;
+                  </p>
+                </div>
+              )}
 
-              <p className="font-sans text-sm text-[#222421]/80 leading-relaxed mb-6 text-center max-w-lg mx-auto">
+              <p className="font-sans text-sm text-[#222421]/80 leading-relaxed mb-6">
                 {inspectedDish.description}
               </p>
+
+              {/* Passport Specs */}
+              <div className="grid grid-cols-2 gap-2.5 mb-6">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <Clock size={16} className="text-[#8F9E4B]" />
+                  <div className="leading-tight">
+                    <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
+                      Regeneración
+                    </span>
+                    <span className="text-xs font-bold text-[#222421] font-heading">
+                      {inspectedDish.regenTime || "8-10 min"} en agua
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]/60">
+                  <ShieldCheck size={16} className="text-[#668032]" />
+                  <div className="leading-tight">
+                    <span className="text-[10px] uppercase font-bold text-[#5E4B3C] font-heading block">
+                      Método
+                    </span>
+                    <span className="text-xs font-bold text-[#222421] font-heading truncate">
+                      {inspectedDish.method || "Herví sin abrir"}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Modal Add to Cart Action */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#DFD8C4]">
