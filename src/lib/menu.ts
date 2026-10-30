@@ -120,6 +120,13 @@ export function parseStore(input: unknown): Store {
       image: imagePath(item.image),
       available: item.available !== false,
       sort: Number.isFinite(sort) ? sort : 0,
+      weight: text(item.weight, 40) || undefined,
+      regenTime: text(item.regenTime, 40) || undefined,
+      method: text(item.method, 80) || undefined,
+      tag: text(item.tag, 40) || undefined,
+      highlight: text(item.highlight, 120) || undefined,
+      featured: Boolean(item.featured),
+      video: typeof item.video === "string" ? item.video : undefined,
     };
   });
   const categoryOrder = new Map(categories.map((category, index) => [category.id, index]));

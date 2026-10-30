@@ -7,8 +7,8 @@ import type { Store } from "@/lib/types";
 // El archivo original por defecto que viene con el código (solo lectura)
 const defaultFile = path.join(process.cwd(), "data", "store.json");
 
-// El directorio temporal donde SÍ podemos escribir en Vercel (/tmp)
-const directory = path.join(os.tmpdir(), "comoencasa-data");
+// El directorio temporal donde podemos escribir en serverless (/tmp)
+const directory = path.join(os.tmpdir(), "abriyservi-data");
 const file = path.join(directory, "store.json");
 
 export async function readStore(): Promise<Store> {

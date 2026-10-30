@@ -1,4 +1,4 @@
-import { MenuApp } from "@/components/menu/menu-app";
+import { LandingApp } from "@/components/landing/landing-app";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -9,5 +9,5 @@ export default async function Home() {
     ...store,
     dishes: store.dishes.filter((dish) => dish.available),
   };
-  return <MenuApp store={menu} />;
+  return <LandingApp store={menu} />;
 }

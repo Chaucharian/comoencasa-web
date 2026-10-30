@@ -13,6 +13,13 @@ export type Dish = {
   image: string | null;
   available: boolean;
   sort: number;
+  weight?: string;
+  regenTime?: string;
+  method?: string;
+  tag?: string;
+  highlight?: string;
+  featured?: boolean;
+  video?: string;
 };
 
 export type Store = {

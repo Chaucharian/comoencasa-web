@@ -42,8 +42,8 @@ function Login() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center bg-background px-5">
-      <p className="text-sm font-medium text-primary">Como en Casa</p>
-      <h1 className="mt-1 font-display text-5xl">Cocina</h1>
+      <p className="text-sm font-script text-[#8F9E4B] text-xl">abrí y serví</p>
+      <h1 className="mt-1 font-heading font-black text-4xl text-[#222421] uppercase">Administración</h1>
       <p className="mt-2 text-muted-foreground">Acá se edita la carta, el horario y el WhatsApp que recibe los pedidos.</p>
       <form
         className="mt-6 space-y-3"
@@ -282,8 +282,8 @@ function Editor({ initial }: { initial: Store }) {
     <div className={cn("mx-auto min-h-svh max-w-lg bg-background", dirty ? "pb-28" : "pb-10")}>
       <header className="flex items-start justify-between gap-3 px-5 pt-6">
         <div>
-          <p className="text-sm font-medium text-primary">Como en Casa</p>
-          <h1 className="font-display text-4xl leading-none">Cocina</h1>
+          <p className="text-sm font-script text-[#8F9E4B] text-xl">abrí y serví</p>
+          <h1 className="font-heading font-black text-3xl leading-none uppercase text-[#222421]">Administración</h1>
         </div>
         <div className="flex gap-3 pt-2 text-sm">
           <Link href="/" className="text-muted-foreground">
