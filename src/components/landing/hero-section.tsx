@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { ArrowDown, Flame, CheckCircle2 } from "lucide-react";
-import { PotBoilingIcon, ScissorsCutIcon, PlateServeIcon } from "@/components/brand/brand-icons";
+import Image from "next/image";
+import { ArrowDown, Flame, Timer, ShieldCheck, Snowflake } from "lucide-react";
 
 interface StepInfo {
   id: string;
   num: string;
   startTime: number;
   endTime: number;
+  tag: string;
+  shortLabel: string;
   title: string;
-  subtitle: string;
   desc: string;
-  tip: string;
-  icon: React.ReactNode;
 }
 
 const STEPS: StepInfo[] = [
@@ -22,33 +21,30 @@ const STEPS: StepInfo[] = [
     num: "01",
     startTime: 2.0,
     endTime: 8.0,
-    title: "1. Sumergí pack",
-    subtitle: "Colocá la bolsa sin abrir",
-    desc: "Colocá la bolsa sellada al vacío directo en una olla con agua hirviendo a 100°C. No la abras: el calor distribuye parejo y la comida se regenera en su propio jugo sin perder humedad.",
-    tip: "8 a 10 min guisados y carnes · 5 min pastas finas",
-    icon: <PotBoilingIcon size={24} className="text-[#8F9E4B]" />,
+    tag: "100°C · Sin abrir",
+    shortLabel: "1. Sumergí",
+    title: "1. Sumergí el pack",
+    desc: "Directo en agua hirviendo. Se regenera en su propio jugo sin perder humedad ni sabor.",
   },
   {
     id: "hervi",
     num: "02",
     startTime: 8.0,
     endTime: 12.0,
-    title: "2. Herví 8-10 min",
-    subtitle: "Regeneración homogénea en agua",
-    desc: "El baño maría mantiene los 100°C de forma envolvente sin resecar ni quemar. Todos los nutrientes, aromas y reducciones se recirculan dentro del vacío.",
-    tip: "Cero salpicaduras ni olor a fritura en tu casa",
-    icon: <Flame size={24} className="text-[#8F9E4B]" />,
+    tag: "8 a 10 min",
+    shortLabel: "2. Herví",
+    title: "2. Herví a fuego medio",
+    desc: "El baño maría mantiene los jugos intactos. Cero salpicaduras ni olor en tu cocina.",
   },
   {
     id: "servi",
     num: "03",
     startTime: 12.0,
     endTime: 19.5,
+    tag: "Al plato",
+    shortLabel: "3. Serví",
     title: "3. Abrí y disfrutá",
-    subtitle: "Vapor y aromas de recién hecho",
-    desc: "Retirá la bolsa por el borde superior (no quema), cortá con tijera y volcá directo al plato. Verás salir una nube de vapor fragante con el brillo de comida recién hecha.",
-    tip: "Lavás un solo plato y un tenedor. Fin.",
-    icon: <ScissorsCutIcon size={24} className="text-[#8F9E4B]" />,
+    desc: "Cortá la esquina y serví directo. Nube de vapor fragante y textura de recién cocinado.",
   },
 ];
 
@@ -60,29 +56,148 @@ export function HeroSection() {
   const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
   const [videoTime, setVideoTime] = useState(2.0);
 
-  const isSeekingRef = useRef(false);
+  const scrollProgressRef = useRef(0);
   const targetTimeRef = useRef(2.0);
 
-  // Smooth video seeker
-  const seekVideoTo = useCallback((time: number) => {
-    targetTimeRef.current = time;
-    if (!videoRef.current) return;
-    if (!isSeekingRef.current) {
-      if (Math.abs(videoRef.current.currentTime - time) > 0.06) {
-        isSeekingRef.current = true;
-        videoRef.current.currentTime = time;
+  // Time handoff and step playback refs
+  const heroTimeRef = useRef(2.0);
+  const handoffTimeRef = useRef<number | null>(null);
+  const handoffScrollYRef = useRef<number>(0);
+  const isPlayingStepRef = useRef(false);
+  const selectedStepIdxRef = useRef<number | null>(null);
+
+  // Helper to resolve active step from a timestamp
+  const getStepFromTime = useCallback((time: number): number => {
+    if (time < 8.0) return 0;
+    if (time < 12.0) return 1;
+    return 2;
+  }, []);
+
+  // Dedicated RAF animation loop: plays video smoothly toward target time instead of jittery seeking
+  useEffect(() => {
+    let rafId: number;
+
+    const tick = () => {
+      const video = videoRef.current;
+      if (!video) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      // 1. Initial Hero Loop (progress < 0.02)
+      if (scrollProgressRef.current < 0.02) {
+        handoffTimeRef.current = null;
+        isPlayingStepRef.current = false;
+
+        if (video.playbackRate !== 1.0) {
+          video.playbackRate = 1.0;
+        }
+        if (video.paused) {
+          video.play().catch(() => { });
+        }
+        // Continuous loop between 2.0s and 19.5s
+        if (video.currentTime >= 19.5 || video.currentTime < 2.0) {
+          video.currentTime = 2.0;
+        }
+        heroTimeRef.current = video.currentTime;
+        setVideoTime(video.currentTime);
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      // 2. User clicked a step: play continuously from that step timestamp!
+      if (isPlayingStepRef.current) {
+        if (video.playbackRate !== 1.0) {
+          video.playbackRate = 1.0;
+        }
+        if (video.paused) {
+          video.play().catch(() => { });
+        }
+        const currentTime = video.currentTime;
+        setVideoTime(currentTime);
+
+        // Keep active step indicator in sync with current playback time
+        setActiveStepIndex(getStepFromTime(currentTime));
+
+        // When reaching end of cycle, loop back to 2.0s
+        if (currentTime >= 19.5 || currentTime < 2.0) {
+          video.currentTime = 2.0;
+        }
+
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      // 3. User is actively driving video with scroll:
+      const target = targetTimeRef.current;
+      const current = video.currentTime;
+      const diff = target - current;
+
+      if (diff > 0.08) {
+        // Target is ahead: play fluidly forward toward target!
+        const rate = Math.min(2.8, Math.max(0.85, diff * 1.5));
+        if (Math.abs(video.playbackRate - rate) > 0.05) {
+          video.playbackRate = rate;
+        }
+        if (video.paused) {
+          video.play().catch(() => { });
+        }
+        setVideoTime(video.currentTime);
+      } else if (diff < -0.08) {
+        // Target is behind: interpolate backward smoothly
+        if (!video.paused) {
+          video.pause();
+        }
+        const step = diff * 0.22;
+        const nextTime = Math.max(2.0, current + step);
+        try {
+          video.currentTime = nextTime;
+        } catch {
+          // Ignore
+        }
+        setVideoTime(nextTime);
+      } else {
+        // Reached target within margin: pause and hold
+        if (!video.paused) {
+          video.pause();
+        }
+        setVideoTime(current);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  // When metadata loads, cue to 2.0s and ensure autoplay if at the top
+  const handleLoadedMetadata = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 2.0;
+      if (scrollProgressRef.current < 0.02) {
+        videoRef.current.play().catch(() => { });
       }
     }
   }, []);
 
-  const handleSeeked = useCallback(() => {
-    isSeekingRef.current = false;
-    if (
-      videoRef.current &&
-      Math.abs(videoRef.current.currentTime - targetTimeRef.current) > 0.06
-    ) {
-      isSeekingRef.current = true;
-      videoRef.current.currentTime = targetTimeRef.current;
+  // Sync video time while playing in hero loop
+  const handleTimeUpdate = useCallback(() => {
+    if (!videoRef.current) return;
+    if (scrollProgressRef.current < 0.02) {
+      if (videoRef.current.currentTime >= 19.5 || videoRef.current.currentTime < 2.0) {
+        videoRef.current.currentTime = 2.0;
+      }
+      heroTimeRef.current = videoRef.current.currentTime;
+      setVideoTime(videoRef.current.currentTime);
+    }
+  }, []);
+
+  // Ensure video starts playing on mount if in hero
+  useEffect(() => {
+    if (videoRef.current && window.scrollY < 40) {
+      videoRef.current.currentTime = 2.0;
+      videoRef.current.play().catch(() => { });
     }
   }, []);
 
@@ -101,36 +216,44 @@ export function HeroSection() {
       const currentScroll = -rect.top;
       const progress = Math.min(1, Math.max(0, currentScroll / totalScrollable));
 
+      scrollProgressRef.current = progress;
       setScrollProgress(progress);
 
-      // Map progress to video timeline:
-      // 0.00 to 0.16 -> Hero title view (video holds at 2.0s)
-      // 0.16 to 0.44 -> Step 1 (Sumergí): video 2.0s -> 8.0s
-      // 0.44 to 0.72 -> Step 2 (Herví): video 8.0s -> 12.0s
-      // 0.72 to 1.00 -> Step 3 (Serví): video 12.0s -> 19.5s
-      let calculatedTime = 2.0;
-      let currentStep: number | null = null;
+      const isHeroMode = progress < 0.02;
 
-      if (progress < 0.16) {
-        calculatedTime = 2.0;
-        currentStep = null; // showing hero title
-      } else if (progress < 0.44) {
-        const local = (progress - 0.16) / (0.44 - 0.16);
-        calculatedTime = 2.0 + local * (8.0 - 2.0);
-        currentStep = 0;
-      } else if (progress < 0.72) {
-        const local = (progress - 0.44) / (0.72 - 0.44);
-        calculatedTime = 8.0 + local * (12.0 - 8.0);
-        currentStep = 1;
+      if (isHeroMode) {
+        handoffTimeRef.current = null;
+        isPlayingStepRef.current = false;
+        setActiveStepIndex(null);
       } else {
-        const local = (progress - 0.72) / (1.00 - 0.72);
-        calculatedTime = 12.0 + local * (19.5 - 12.0);
-        currentStep = 2;
-      }
+        // If user is actively playing a step, don't interrupt it with programmatic scroll events!
+        if (isPlayingStepRef.current) {
+          return;
+        }
 
-      setVideoTime(calculatedTime);
-      setActiveStepIndex(currentStep);
-      seekVideoTo(calculatedTime);
+        // Natural handoff: capture the exact second the user was watching in the hero!
+        if (handoffTimeRef.current === null) {
+          const captured = videoRef.current ? videoRef.current.currentTime : heroTimeRef.current;
+          handoffTimeRef.current = Math.min(19.5, Math.max(2.0, captured));
+          handoffScrollYRef.current = window.scrollY;
+        }
+
+        const baseTime = handoffTimeRef.current;
+        const deltaScroll = Math.max(0, window.scrollY - handoffScrollYRef.current);
+
+        // Rate: calculate how fast scroll advances remaining time
+        const remainingTime = Math.max(3.0, 19.5 - baseTime);
+        const scrollPerSec = Math.max(70, (totalScrollable * 0.75) / remainingTime);
+        const calculatedTime = Math.min(19.5, Math.max(2.0, baseTime + deltaScroll / scrollPerSec));
+
+        targetTimeRef.current = calculatedTime;
+        setActiveStepIndex(getStepFromTime(calculatedTime));
+      }
+    };
+
+    const handleUserGesture = () => {
+      // Physical user interaction returns video control back to scroll scrubbing
+      isPlayingStepRef.current = false;
     };
 
     const onScroll = () => {
@@ -139,33 +262,53 @@ export function HeroSection() {
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", handleUserGesture, { passive: true });
+    window.addEventListener("touchstart", handleUserGesture, { passive: true });
+    window.addEventListener("touchmove", handleUserGesture, { passive: true });
     handleScroll(); // initialize
 
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", handleUserGesture);
+      window.removeEventListener("touchstart", handleUserGesture);
+      window.removeEventListener("touchmove", handleUserGesture);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [seekVideoTo]);
+  }, [getStepFromTime]);
 
-  // Jump smoothly to a specific step when clicked
+  // Jump smoothly to a specific step when clicked:
+  // Cues to step start and PLAYS continuously so the user can watch the action
   const handleStepClick = (index: number) => {
-    if (!containerRef.current) return;
+    const step = STEPS[index];
+    const video = videoRef.current;
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const scrollTop = window.scrollY + rect.top;
-    const totalScrollable = rect.height - window.innerHeight;
+    setActiveStepIndex(index);
+    selectedStepIdxRef.current = index;
+    isPlayingStepRef.current = true;
+    targetTimeRef.current = step.startTime;
 
-    // Target scroll points:
-    // Step 0: progress = 0.28
-    // Step 1: progress = 0.56
-    // Step 2: progress = 0.84
-    const targetProgress = index === 0 ? 0.28 : index === 1 ? 0.56 : 0.84;
-    const targetY = scrollTop + targetProgress * totalScrollable;
+    // Synchronize handoff time to this step
+    handoffTimeRef.current = step.startTime;
 
-    window.scrollTo({
-      top: targetY,
-      behavior: "smooth",
-    });
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = window.scrollY + rect.top;
+      const totalScrollable = rect.height - window.innerHeight;
+      const targetProgress = index === 0 ? 0.06 : index === 1 ? 0.45 : 0.80;
+      handoffScrollYRef.current = scrollTop + targetProgress * totalScrollable;
+
+      window.scrollTo({
+        top: handoffScrollYRef.current,
+        behavior: "smooth",
+      });
+    }
+
+    if (video) {
+      video.currentTime = step.startTime;
+      setVideoTime(step.startTime);
+      video.playbackRate = 1.0;
+      video.play().catch(() => { });
+    }
   };
 
   // Calculate individual progress for each of the 3 segment bars
@@ -183,191 +326,217 @@ export function HeroSection() {
 
   const fills = [step1Fill, step2Fill, step3Fill];
 
-  // Hero title opacity fades out as user scrolls past 0.14
-  const heroContentOpacity = Math.max(0, 1 - scrollProgress / 0.16);
+  // Hero title opacity fades out immediately as user swipes down
+  const heroContentOpacity = Math.max(0, 1 - scrollProgress / 0.03);
+
+  // Top logo remains visible through all 3 steps, fading out only when approaching platos-estrella
+  const topLogoOpacity = scrollProgress < 0.92 ? 1 : Math.max(0, (1 - scrollProgress) / 0.08);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[380vh] sm:h-[420vh] bg-[#222421]"
+      className="relative w-full h-[360vh] sm:h-[650vh] bg-[#222421]"
     >
-      {/* Sticky Fullscreen Video Canvas */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
-        {/* HTML5 Video element scrubbing directly on scroll */}
+      {/* Sticky Fullscreen Video Canvas: covers the entire physical screen including top & bottom notch */}
+      <div
+        className="sticky top-0 w-full overflow-hidden flex items-center justify-center h-screen h-[100dvh]"
+        style={{
+          height: "100dvh",
+          minHeight: "100dvh",
+        }}
+      >
+        {/* HTML5 Video element: auto-loops in hero, scrubs on scroll */}
         <video
           ref={videoRef}
           src="/videos/aa.mp4"
+          autoPlay
+          loop
           muted
           playsInline
           preload="auto"
-          onSeeked={handleSeeked}
-          className="w-full h-full object-cover object-center scale-105 filter brightness-[0.85] contrast-[1.08] transition-all duration-300"
+          {...({ "webkit-playsinline": "true", "x5-playsinline": "true" } as any)}
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          className="w-full h-full object-cover object-center scale-105 filter brightness-[0.92] contrast-[1.06] transition-all duration-300 pointer-events-none"
         />
 
-        {/* Ambient Vignette Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#222421]/75 via-[#222421]/30 to-[#222421]/85 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#8F9E4B]/15 via-transparent to-[#222421]/50 pointer-events-none" />
-
-        {/* 1. Initial Hero Content View (Visible at scrollProgress < 0.16) */}
+        {/* Ambient Overlay: light in upper/middle so video is crystal clear, deeper at bottom where content sits */}
         <div
-          className="absolute inset-0 z-10 flex items-center justify-center px-5 sm:px-6 text-center pointer-events-none pt-24 pb-28"
+          className="absolute inset-0 pointer-events-none transition-opacity duration-700"
           style={{
-            opacity: heroContentOpacity,
-            transform: `translateY(${-scrollProgress * 120}px)`,
-            display: heroContentOpacity <= 0.01 ? "none" : "flex",
+            background:
+              scrollProgress < 0.02
+                ? "linear-gradient(to bottom, rgba(34,36,33,0.55) 0%, rgba(34,36,33,0.06) 30%, rgba(34,36,33,0.5) 60%, rgba(34,36,33,0.92) 85%, rgba(34,36,33,0.98) 100%)"
+                : "linear-gradient(to bottom, rgba(34,36,33,0.55) 0%, rgba(34,36,33,0.06) 35%, rgba(34,36,33,0.1) 65%, rgba(34,36,33,0.75) 100%)",
+          }}
+        />
+
+        {/* Floating Top Brand Logo - Stays visible in Hero and during Steps, only fades at platos-estrella */}
+        <div
+          className="absolute top-4 sm:top-6 md:top-8 inset-x-0 z-20 flex justify-center pointer-events-none transition-opacity duration-300"
+          style={{
+            opacity: topLogoOpacity,
+            display: topLogoOpacity <= 0.01 ? "none" : "flex",
           }}
         >
-          <div className="max-w-4xl mx-auto flex flex-col items-center">
-            {/* Brand Display Title */}
-            <div className="mb-3 sm:mb-4">
-              <span className="block font-script text-5xl sm:text-7xl md:text-8xl text-[#FFFDF2] drop-shadow-md -rotate-2 mb-1">
-                abrí y serví
-              </span>
-              <h1 className="font-heading font-black text-2xl sm:text-4xl md:text-6xl text-[#FFFDF2] uppercase tracking-tight leading-snug sm:leading-[1.08] text-balance">
-                De la olla al plato en 8 minutos.
-              </h1>
-            </div>
+          <Image
+            src="/brand/logo-cream.png"
+            alt="abrí y serví"
+            width={360}
+            height={280}
+            priority
+            className="h-16 sm:h-24 md:h-28 lg:h-32 w-auto object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.65)]"
+          />
+        </div>
 
-            {/* Descriptor */}
-            <p className="font-sans text-xs sm:text-lg text-[#FFFDF2]/90 font-normal max-w-xl text-balance mb-6 sm:mb-8 leading-relaxed">
-              Cocinamos con recetas tradicionales de familia y sellamos al vacío para capturar
-              todo el jugo y aroma. Herví la bolsa cerrada 8 a 10 minutos y sentate a comer
-              sin ensuciar una sola olla.
+        {/* 1. Initial Hero Content View - Anchored with dynamic safe-area-inset for all mobile screens */}
+        <div
+          className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center justify-end px-4 sm:px-6 text-center pointer-events-none pt-10"
+          style={{
+            opacity: heroContentOpacity,
+            transform: `translateY(${-scrollProgress * 50}px)`,
+            display: heroContentOpacity <= 0.01 ? "none" : "flex",
+            paddingBottom: "max(2.25rem, calc(env(safe-area-inset-bottom, 24px) + 0.75rem))",
+          }}
+        >
+          <div className="max-w-3xl mx-auto flex flex-col items-center w-full">
+            {/* Main Claim: calibrated for perfect mobile vertical rhythm */}
+            <h1 className="font-heading font-black text-xl sm:text-3xl md:text-5xl lg:text-6xl text-[#FFFDF2] uppercase tracking-tight leading-[1.1] text-balance mb-1.5 sm:mb-3">
+              De la olla al plato en 8 minutos.
+            </h1>
+
+            {/* Direct & Simple Descriptor */}
+            <p className="font-sans text-xs sm:text-base md:text-lg text-[#FFFDF2]/90 font-normal max-w-sm sm:max-w-lg text-balance mb-3 sm:mb-5 leading-normal sm:leading-relaxed">
+              Comida casera envasada al vacío. Calentá en agua hirviendo y serví sin ensuciar una sola olla.
             </p>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-6 sm:mb-8 w-full sm:w-auto pointer-events-auto">
+            {/* Action Buttons: Strictly Horizontal on mobile & desktop */}
+            <div className="flex flex-row items-center justify-center gap-2 sm:gap-4 mb-2.5 sm:mb-4 w-full max-w-xs sm:max-w-md pointer-events-auto">
               <a
                 href="#platos-estrella"
-                className="w-full sm:w-auto px-7 py-3 sm:py-3.5 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-xl hover:bg-[#7D8B3F] active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                className="flex-1 py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-extrabold text-[11px] sm:text-sm tracking-wider uppercase shadow-xl hover:bg-[#7D8B3F] active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer whitespace-nowrap"
               >
-                <span>Ver Platos Estrella</span>
-                <ArrowDown size={15} className="group-hover:translate-y-0.5 transition-transform" />
+                <span>Ver Platos</span>
+                <ArrowDown size={14} className="group-hover:translate-y-0.5 transition-transform shrink-0" />
               </a>
 
               <button
                 type="button"
                 onClick={() => handleStepClick(0)}
-                className="w-full sm:w-auto px-6 py-3 sm:py-3.5 rounded-full bg-[#FFFDF2]/20 backdrop-blur-md border border-[#FFFDF2]/40 text-[#FFFDF2] font-heading font-bold text-xs sm:text-sm tracking-wider uppercase hover:bg-[#FFFDF2]/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 sm:py-3.5 px-3 sm:px-5 rounded-full bg-[#FFFDF2]/15 backdrop-blur-md border border-[#FFFDF2]/30 text-[#FFFDF2] font-heading font-bold text-[11px] sm:text-sm tracking-wider uppercase hover:bg-[#FFFDF2]/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap"
               >
-                <Flame size={15} className="text-[#8F9E4B]" />
-                <span>Ver el paso a paso</span>
+                <Flame size={14} className="text-[#8F9E4B] shrink-0" />
+                <span>El Paso a Paso</span>
               </button>
             </div>
 
-            {/* Mobile Quality Badges */}
-            <div className="sm:hidden inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#222421]/60 backdrop-blur-sm border border-[#FFFDF2]/20 text-[10px] font-heading font-bold uppercase tracking-wider text-[#FFFDF2]/90">
-              <span>8-10 min</span>
-              <span className="text-[#8F9E4B]">•</span>
-              <span>0% Conservantes</span>
-              <span className="text-[#8F9E4B]">•</span>
-              <span>0-4°C / -18°C</span>
-            </div>
+            {/* Full-width indicators strip: spans to the screen limits with no left/right borders */}
+            <div className="w-screen -mx-4 sm:-mx-6 flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 bg-[#222421]/75 backdrop-blur-md border-y border-[#FFFDF2]/15 border-x-0 text-[#FFFDF2] shadow-md flex-nowrap whitespace-nowrap">
+              <div className="inline-flex items-center gap-1">
+                <Timer size={10} className="text-[#8F9E4B] shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
+                  8-10 min
+                </span>
+              </div>
 
-            {/* Desktop Quality Badges */}
-            <div className="hidden sm:grid grid-cols-3 gap-6 max-w-2xl w-full border-t border-[#FFFDF2]/20 pt-6 text-[#FFFDF2]">
-              <div className="flex flex-col items-center">
-                <span className="font-heading font-black text-xl sm:text-2xl text-[#FFFDF2]">8-10 min</span>
-                <span className="text-xs text-[#FFFDF2]/75 uppercase font-medium mt-0.5 font-heading">
-                  Baño maría veloz
+              <span className="text-[#FFFDF2]/25 text-[10px] select-none">•</span>
+
+              <div className="inline-flex items-center gap-1">
+                <ShieldCheck size={10} className="text-[#8F9E4B] shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
+                  0% Conservantes
                 </span>
               </div>
-              <div className="flex flex-col items-center border-x border-[#FFFDF2]/20 px-2">
-                <span className="font-heading font-black text-xl sm:text-2xl text-[#FFFDF2]">0% Conservantes</span>
-                <span className="text-xs text-[#FFFDF2]/75 uppercase font-medium mt-0.5 font-heading">
-                  Vacío como guardián
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="font-heading font-black text-xl sm:text-2xl text-[#FFFDF2]">0-4°C / -18°C</span>
-                <span className="text-xs text-[#FFFDF2]/75 uppercase font-medium mt-0.5 font-heading">
-                  Heladera o freezer
+
+              <span className="text-[#FFFDF2]/25 text-[10px] select-none">•</span>
+
+              <div className="inline-flex items-center gap-1">
+                <Snowflake size={10} className="text-[#8F9E4B] shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
+                  7d heladera · 3m freezer
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 2. Floating Step Cards (Visible while scrolling past hero) */}
+        {/* Concentrated Interactive Stepper with Smooth Bezier Morphing Drawer */}
         {activeStepIndex !== null && (
           <div
-            id="metodo"
-            className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center sm:justify-start px-5 sm:px-12 lg:px-20"
+            className="absolute left-0 right-0 z-30 px-3 sm:px-6 flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            style={{
+              bottom: "max(1.75rem, calc(env(safe-area-inset-bottom, 20px) + 0.5rem))",
+            }}
           >
-            <div className="w-full max-w-md bg-[#222421]/80 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#FFFDF2]/20 text-[#FFFDF2] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-300">
-              {/* Step indicator */}
-              <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 rounded-full bg-[#8F9E4B] text-[#FFFDF2] text-xs font-heading font-black uppercase tracking-widest shadow-xs">
-                  PASO {STEPS[activeStepIndex].num}
-                </span>
-                <div className="w-10 h-10 rounded-2xl bg-[#FFFDF2]/10 border border-[#FFFDF2]/20 flex items-center justify-center">
-                  {STEPS[activeStepIndex].icon}
-                </div>
+            <div className="w-full max-w-xl bg-[#222421]/80 backdrop-blur-xl border border-[#FFFDF2]/20 shadow-2xl rounded-3xl p-2 sm:p-2.5 pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col">
+              {/* 1. Step Pills Row */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {STEPS.map((step, idx) => {
+                  const fill = fills[idx];
+                  const isCurrent = activeStepIndex === idx;
+
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => handleStepClick(idx)}
+                      className={`group relative flex-1 py-2 sm:py-2.5 px-2 rounded-2xl overflow-hidden text-center transition-all duration-300 cursor-pointer select-none ${isCurrent
+                        ? "ring-1 ring-[#8F9E4B]/60 shadow-md"
+                        : "hover:bg-[#FFFDF2]/5"
+                        }`}
+                      title={`Ir al paso ${step.num}: ${step.title}`}
+                    >
+                      {/* Background empty track */}
+                      <div
+                        className={`absolute inset-0 rounded-2xl transition-colors duration-300 ${isCurrent ? "bg-[#8F9E4B]/20" : "bg-[#FFFDF2]/10"
+                          }`}
+                      />
+
+                      {/* Progress Fill bar matching video playback */}
+                      <div
+                        className="absolute inset-y-0 left-0 bg-[#8F9E4B] rounded-2xl transition-all duration-100 ease-linear shadow-xs"
+                        style={{ width: `${fill}%` }}
+                      />
+
+                      {/* Text Label: responsive to prevent ellipses on mobile */}
+                      <span
+                        className={`relative z-10 block text-[11px] sm:text-xs font-heading font-black uppercase tracking-wider truncate transition-colors duration-200 ${isCurrent || fill > 0
+                          ? "text-[#FFFDF2] drop-shadow-sm"
+                          : "text-[#FFFDF2]/65 group-hover:text-[#FFFDF2]"
+                          }`}
+                      >
+                        <span className="sm:hidden">{step.shortLabel}</span>
+                        <span className="hidden sm:inline">{step.title}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Title */}
-              <h3 className="font-heading font-black text-2xl sm:text-3xl uppercase tracking-tight text-[#FFFDF2] mb-1">
-                {STEPS[activeStepIndex].title}
-              </h3>
-              <p className="text-xs uppercase font-heading font-bold text-[#8F9E4B] tracking-wider mb-3">
-                {STEPS[activeStepIndex].subtitle}
-              </p>
+              {/* 2. Expanded Step Details with Smooth Bezier Morphing */}
+              <div
+                key={activeStepIndex}
+                className="mt-2 pt-2 sm:mt-2.5 sm:pt-2.5 border-t border-[#FFFDF2]/10 px-2 sm:px-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 animate-in fade-in slide-in-from-bottom-2 duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              >
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8F9E4B] shrink-0 animate-pulse" />
+                  <span className="text-[10px] font-heading font-black uppercase tracking-widest text-[#8F9E4B]">
+                    PASO {STEPS[activeStepIndex].num}
+                  </span>
+                  <span className="text-[#FFFDF2]/30 text-[10px]">•</span>
+                  <span className="text-[10px] font-heading font-bold uppercase tracking-wider text-[#FFFDF2]/70">
+                    {STEPS[activeStepIndex].tag}
+                  </span>
+                </div>
 
-              {/* Description */}
-              <p className="font-sans text-xs sm:text-sm text-[#FFFDF2]/85 leading-relaxed mb-4">
-                {STEPS[activeStepIndex].desc}
-              </p>
-
-              {/* Tip Pill */}
-              <div className="pt-3 border-t border-[#FFFDF2]/15 flex items-center gap-2 text-xs text-[#FFFDF2]/90 font-medium">
-                <CheckCircle2 size={14} className="text-[#8F9E4B] shrink-0" />
-                <span>{STEPS[activeStepIndex].tip}</span>
+                <p className="font-sans text-xs sm:text-[13px] text-[#FFFDF2]/90 leading-relaxed font-normal text-left sm:text-right">
+                  {STEPS[activeStepIndex].desc}
+                </p>
               </div>
             </div>
           </div>
         )}
-
-        {/* 3. Bottom Video Scrubbing Progress Bar Navigation */}
-        <div className="absolute bottom-5 sm:bottom-8 left-0 right-0 z-30 px-4 sm:px-8 flex justify-center pointer-events-none">
-          <div className="w-full max-w-2xl flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-2xl sm:rounded-full bg-[#222421]/85 backdrop-blur-md border border-[#FFFDF2]/25 shadow-2xl pointer-events-auto">
-            {STEPS.map((step, idx) => {
-              const fill = fills[idx];
-              const isCurrent = activeStepIndex === idx;
-
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => handleStepClick(idx)}
-                  className="group relative flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl sm:rounded-full overflow-hidden text-center transition-all cursor-pointer select-none"
-                  title={`Ir al paso ${step.num}: ${step.title}`}
-                >
-                  {/* Empty track */}
-                  <div className="absolute inset-0 bg-[#FFFDF2]/10 rounded-xl sm:rounded-full" />
-
-                  {/* Progress Fill bar matching video playback */}
-                  <div
-                    className="absolute inset-y-0 left-0 bg-[#8F9E4B] rounded-xl sm:rounded-full transition-all duration-100 ease-linear shadow-xs"
-                    style={{ width: `${fill}%` }}
-                  />
-
-                  {/* Text Label */}
-                  <span
-                    className={`relative z-10 block text-[10px] sm:text-xs font-heading font-black uppercase tracking-wider truncate transition-colors ${
-                      isCurrent
-                        ? "text-[#FFFDF2] drop-shadow-md"
-                        : fill > 0
-                        ? "text-[#FFFDF2]"
-                        : "text-[#FFFDF2]/65 group-hover:text-[#FFFDF2]"
-                    }`}
-                  >
-                    {step.title}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
 }
+

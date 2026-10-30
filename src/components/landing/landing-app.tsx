@@ -46,9 +46,23 @@ export function LandingApp({ store }: LandingAppProps) {
     }
   }, [cart, isMounted]);
 
-  // Featured dishes for the showcase section
+  // Featured dishes for the showcase section (all vacuum-sealed)
   const featuredDishes = store.dishes.filter(
-    (dish) => dish.featured || ["carne-horno", "pastel-papa", "canelones", "pollo-disco", "lasana", "tarta-jamon"].includes(dish.id)
+    (dish) =>
+      dish.featured ||
+      [
+        "carne-horno",
+        "bondiola-braseada",
+        "osobuco-malbec",
+        "bife-chorizo",
+        "pastel-papa",
+        "pollo-disco",
+        "pollo-crema",
+        "canelones",
+        "lasana",
+        "raviolones-calabaza",
+        "guiso-lentejas",
+      ].includes(dish.id)
   );
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.qty, 0);

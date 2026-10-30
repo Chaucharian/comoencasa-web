@@ -9,13 +9,17 @@ export function SmoothScroll() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
+    // Use native GPU touch scrolling on mobile/tablets to prevent touch hijacking
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (isTouch) return;
+
     const lenis = new Lenis({
-      duration: 1.15,
+      duration: 1.45,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
-      touchMultiplier: 1.5,
+      wheelMultiplier: 0.85,
     });
 
     let rafId: number;

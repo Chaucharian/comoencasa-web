@@ -1,9 +1,7 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import { BrandIsotypeSvg, SparkleCluster, SparkleStar } from "@/components/brand/brand-icons";
-import { MapPin, Clock, Phone, Heart, ShieldCheck } from "lucide-react";
+import Image from "next/image";
+import { MapPin, Clock, Phone, ShieldCheck } from "lucide-react";
 import type { Store } from "@/lib/types";
 
 export function Footer({ store }: { store: Store }) {
@@ -13,18 +11,19 @@ export function Footer({ store }: { store: Store }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-12 pb-14 border-b border-[#FFFDF2]/15">
           {/* Brand Column (5 cols) */}
           <div className="md:col-span-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#8F9E4B] flex items-center justify-center text-[#FFFDF2] border border-[#FFFDF2]/40 shadow-md">
-                <BrandIsotypeSvg size={26} className="text-[#FFFDF2]" />
-              </div>
-              <div>
-                <span className="font-script text-3xl text-[#FFFDF2] leading-none block">
-                  abrí y serví
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#8F9E4B] font-heading">
-                  Comida casera envasada al vacío
-                </span>
-              </div>
+            <div className="mb-5">
+              <Link href="#" className="inline-block group" title="abrí y serví — Inicio">
+                <Image
+                  src="/brand/logo-cream.png"
+                  alt="abrí y serví"
+                  width={210}
+                  height={68}
+                  className="h-11 sm:h-12 w-auto object-contain"
+                />
+              </Link>
+              <p className="text-[10px] uppercase font-bold tracking-widest text-[#8F9E4B] font-heading mt-2">
+                Comida casera envasada al vacío
+              </p>
             </div>
 
             <p className="font-sans text-xs sm:text-sm text-[#FFFDF2]/75 leading-relaxed max-w-sm mb-6">
