@@ -57,6 +57,16 @@ export function CartDrawer({
       return;
     }
 
+    if (!customer.phone.trim()) {
+      alert("Por favor indicá tu número de teléfono o WhatsApp.");
+      return;
+    }
+
+    if (customer.phone.replace(/\D/g, "").length < 8) {
+      alert("Por favor ingresá un número de teléfono válido (mínimo 8 dígitos).");
+      return;
+    }
+
     if (fulfillment === "delivery" && !customer.address.trim()) {
       alert("Por favor indicá tu dirección para el envío.");
       return;
@@ -75,7 +85,7 @@ export function CartDrawer({
       `📦 *MODALIDAD:* ${fulfillment === "delivery" ? "Envío a domicilio" : "Retiro por el local"}`,
       fulfillment === "delivery" ? `📍 *DIRECCIÓN:* ${customer.address}` : `📍 *RETIRO EN:* ${store.address}`,
       `👤 *NOMBRE:* ${customer.name}`,
-      customer.phone ? `📞 *TELÉFONO:* ${customer.phone}` : null,
+      `📞 *TELÉFONO:* ${customer.phone.trim()}`,
       `⏰ *CUÁNDO:* ${customer.when}`,
       `💳 *FORMA DE PAGO:* ${customer.payment === "efectivo" ? "Efectivo" : "Transferencia bancaria"}`,
       customer.note ? `📝 *NOTAS:* ${customer.note}` : null,
@@ -275,11 +285,14 @@ export function CartDrawer({
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[11px] font-sans text-[#5E4B3C] block mb-1">
-                        Teléfono
+                        Teléfono *
                       </label>
                       <input
+                        required
                         type="tel"
-                        placeholder="WhatsApp"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="WhatsApp / Tel *"
                         value={customer.phone}
                         onChange={(e) =>
                           setCustomer((prev) => ({ ...prev, phone: e.target.value }))

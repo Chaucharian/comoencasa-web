@@ -548,7 +548,7 @@ export function MenuApp({ store }: { store: Store }) {
             />
           </label>
           <label className="block text-sm font-medium">
-            Teléfono
+            Teléfono *
             <input
               required
               type="tel"
