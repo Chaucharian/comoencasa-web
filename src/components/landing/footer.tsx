@@ -48,13 +48,8 @@ export function Footer({ store }: { store: Store }) {
                 </a>
               </li>
               <li>
-                <a href="#platos-estrella" className="hover:text-[#8F9E4B] transition-colors">
-                  Platos Estrella
-                </a>
-              </li>
-              <li>
                 <a href="#carta-completa" className="hover:text-[#8F9E4B] transition-colors">
-                  Carta Completa
+                  Carta de Platos
                 </a>
               </li>
               <li>

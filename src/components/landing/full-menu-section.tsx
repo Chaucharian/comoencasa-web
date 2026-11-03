@@ -13,7 +13,10 @@ import {
   Check,
   ShieldCheck,
   Flame,
+  Activity,
+  ChevronDown,
 } from "lucide-react";
+import { getDishNutrition } from "@/lib/menu";
 import type { Category, Dish } from "@/lib/types";
 
 interface FullMenuSectionProps {
@@ -33,6 +36,15 @@ export function FullMenuSection({
   const [searchQuery, setSearchQuery] = useState("");
   const [inspectedDish, setInspectedDish] = useState<Dish | null>(null);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+  const [expandedNutritionIds, setExpandedNutritionIds] = useState<Record<string, boolean>>({});
+
+  const toggleNutrition = (dishId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNutritionIds((prev) => ({
+      ...prev,
+      [dishId]: !prev[dishId],
+    }));
+  };
 
   // Filtered dishes
   const filteredDishes = useMemo(() => {
@@ -198,6 +210,107 @@ export function FullMenuSection({
                     <p className="font-sans text-xs sm:text-sm text-[#222421]/70 mt-2 line-clamp-2 leading-relaxed">
                       {dish.description}
                     </p>
+
+                    {/* Collapsible Nutritional Information */}
+                    {(() => {
+                      const nutri = getDishNutrition(dish);
+                      const isExpanded = Boolean(expandedNutritionIds[dish.id]);
+                      return (
+                        <div
+                          className="mt-3 pt-2.5 border-t border-[#DFD8C4]/50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => toggleNutrition(dish.id, e)}
+                            className="w-full flex items-center justify-between text-left text-[11px] font-heading font-bold text-[#5E4B3C] hover:text-[#8F9E4B] transition-colors py-0.5 group/nutri cursor-pointer"
+                            aria-expanded={isExpanded}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Activity
+                                size={13}
+                                className="text-[#8F9E4B] group-hover/nutri:scale-110 transition-transform"
+                              />
+                              <span className="tracking-wide">Info Nutricional</span>
+                            </span>
+                            <span className="flex items-center gap-1 text-[10px] text-[#8F9E4B] font-bold">
+                              <span>{isExpanded ? "Ocultar" : "Ver macros"}</span>
+                              <ChevronDown
+                                size={12}
+                                className={`transition-transform duration-250 ${
+                                  isExpanded ? "rotate-180" : ""
+                                }`}
+                              />
+                            </span>
+                          </button>
+
+                          {/* Smooth Collapsible Content */}
+                          <div
+                            className={`grid transition-all duration-300 ease-in-out ${
+                              isExpanded
+                                ? "grid-rows-[1fr] opacity-100 mt-2"
+                                : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                            }`}
+                          >
+                            <div className="overflow-hidden">
+                              <div className="p-2.5 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4] text-[11px]">
+                                <div className="grid grid-cols-4 gap-1.5 text-center">
+                                  <div className="p-1.5 rounded-lg bg-white border border-[#DFD8C4]/40 shadow-2xs">
+                                    <span className="block text-[8px] uppercase font-bold text-[#5E4B3C]/80 tracking-tight">
+                                      Calorías
+                                    </span>
+                                    <span className="font-heading font-black text-[#222421] text-xs">
+                                      {nutri.calories}
+                                    </span>
+                                    <span className="text-[8px] text-[#5E4B3C]/70 block font-medium">
+                                      kcal
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-[#8F9E4B]/10 border border-[#8F9E4B]/30 shadow-2xs">
+                                    <span className="block text-[8px] uppercase font-bold text-[#668032] tracking-tight">
+                                      Proteína
+                                    </span>
+                                    <span className="font-heading font-black text-[#668032] text-xs">
+                                      {nutri.proteins}g
+                                    </span>
+                                    <span className="text-[8px] text-[#668032]/80 block font-bold">
+                                      alta
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-white border border-[#DFD8C4]/40 shadow-2xs">
+                                    <span className="block text-[8px] uppercase font-bold text-[#5E4B3C]/80 tracking-tight">
+                                      Carbos
+                                    </span>
+                                    <span className="font-heading font-black text-[#222421] text-xs">
+                                      {nutri.carbs}g
+                                    </span>
+                                    <span className="text-[8px] text-[#5E4B3C]/70 block font-medium">
+                                      energía
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-white border border-[#DFD8C4]/40 shadow-2xs">
+                                    <span className="block text-[8px] uppercase font-bold text-[#5E4B3C]/80 tracking-tight">
+                                      Grasas
+                                    </span>
+                                    <span className="font-heading font-black text-[#222421] text-xs">
+                                      {nutri.fats}g
+                                    </span>
+                                    <span className="text-[8px] text-[#5E4B3C]/70 block font-medium">
+                                      totales
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between text-[9px] text-[#5E4B3C]/80 pt-1.5 border-t border-[#DFD8C4]/60 px-0.5">
+                                  <span>Porción: {dish.weight || "450g"}</span>
+                                  {nutri.sodium && <span>Sodio: {nutri.sodium}mg</span>}
+                                  <span className="font-bold text-[#668032]">100% natural</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Card Footer: Price & Add Button */}
@@ -335,6 +448,53 @@ export function FullMenuSection({
                   </div>
                 </div>
               </div>
+
+              {/* Nutritional Information in Modal */}
+              {(() => {
+                const nutri = getDishNutrition(inspectedDish);
+                return (
+                  <div className="mb-6 p-4 rounded-2xl bg-[#FFFDF2] border border-[#DFD8C4]">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="flex items-center gap-1.5 text-xs font-heading font-black uppercase tracking-wider text-[#222421]">
+                        <Activity size={14} className="text-[#8F9E4B]" />
+                        <span>Información Nutricional (por porción)</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-[#668032] uppercase">
+                        100% natural · Sin conservantes
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="p-2 rounded-xl bg-white border border-[#DFD8C4]/60">
+                        <span className="block text-[9px] uppercase font-bold text-[#5E4B3C]/80">Calorías</span>
+                        <span className="font-heading font-black text-sm sm:text-base text-[#222421]">{nutri.calories}</span>
+                        <span className="text-[9px] text-[#5E4B3C]/70 block font-medium">kcal</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[#8F9E4B]/15 border border-[#8F9E4B]/30">
+                        <span className="block text-[9px] uppercase font-bold text-[#668032]">Proteína</span>
+                        <span className="font-heading font-black text-sm sm:text-base text-[#668032]">{nutri.proteins}g</span>
+                        <span className="text-[9px] text-[#668032]/80 block font-bold">alta</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-white border border-[#DFD8C4]/60">
+                        <span className="block text-[9px] uppercase font-bold text-[#5E4B3C]/80">Carbos</span>
+                        <span className="font-heading font-black text-sm sm:text-base text-[#222421]">{nutri.carbs}g</span>
+                        <span className="text-[9px] text-[#5E4B3C]/70 block font-medium">energía</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-white border border-[#DFD8C4]/60">
+                        <span className="block text-[9px] uppercase font-bold text-[#5E4B3C]/80">Grasas</span>
+                        <span className="font-heading font-black text-sm sm:text-base text-[#222421]">{nutri.fats}g</span>
+                        <span className="text-[9px] text-[#5E4B3C]/70 block font-medium">totales</span>
+                      </div>
+                    </div>
+
+                    {nutri.sodium && (
+                      <p className="mt-2 text-[10px] text-[#5E4B3C]/80 text-right">
+                        Sodio: <strong className="text-[#222421]">{nutri.sodium}mg</strong> · Envasado al vacío hermético ({inspectedDish.weight || "450g"})
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Modal Add to Cart Action */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#DFD8C4]">

@@ -4,6 +4,14 @@ export type Category = {
   sort: number;
 };
 
+export type NutritionInfo = {
+  calories: number; // kcal
+  proteins: number; // g
+  carbs: number; // g
+  fats: number; // g
+  sodium?: number; // mg
+};
+
 export type Dish = {
   id: string;
   categoryId: string;
@@ -20,6 +28,7 @@ export type Dish = {
   highlight?: string;
   featured?: boolean;
   video?: string;
+  nutrition?: NutritionInfo;
 };
 
 export type Store = {

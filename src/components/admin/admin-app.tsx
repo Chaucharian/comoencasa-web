@@ -30,9 +30,17 @@ function uniqueId(base: string, ids: string[]) {
   return `${base}-${n}`.slice(0, 40);
 }
 
-export function AdminApp({ authed, store }: { authed: boolean; store: Store | null }) {
+export function AdminApp({
+  authed,
+  store,
+  isFirebase = false,
+}: {
+  authed: boolean;
+  store: Store | null;
+  isFirebase?: boolean;
+}) {
   if (!authed || !store) return <Login />;
-  return <Editor initial={store} />;
+  return <Editor initial={store} isFirebase={isFirebase} />;
 }
 
 function Login() {
@@ -91,7 +99,7 @@ function Login() {
   );
 }
 
-function Editor({ initial }: { initial: Store }) {
+function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: boolean }) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [saved, setSaved] = useState(initial);
@@ -275,7 +283,7 @@ function Editor({ initial }: { initial: Store }) {
     }
     setDraft(data);
     setSaved(data);
-    setStatus("Carta publicada.");
+    setStatus(isFirebase ? "Carta publicada y guardada en Firebase Firestore." : "Carta publicada.");
   }
 
   return (
@@ -284,6 +292,22 @@ function Editor({ initial }: { initial: Store }) {
         <div>
           <p className="text-sm font-script text-[#8F9E4B] text-xl">abrí y serví</p>
           <h1 className="font-heading font-black text-3xl leading-none uppercase text-[#222421]">Administración</h1>
+          <div className="mt-2">
+            {isFirebase ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 text-[11px] font-medium tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Firebase Firestore conectado
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-800 text-[11px] font-medium tracking-wide"
+                title="Configurá las variables de entorno de Firebase en .env.local para persistencia en la nube"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Almacenamiento Local (Configurar Firebase en .env.local)
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 pt-2 text-sm">
           <Link href="/" className="text-muted-foreground">

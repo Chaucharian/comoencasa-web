@@ -413,7 +413,7 @@ export function HeroSection() {
             {/* Action Buttons: Strictly Horizontal on mobile & desktop */}
             <div className="flex flex-row items-center justify-center gap-2 sm:gap-4 mb-2.5 sm:mb-4 w-full max-w-xs sm:max-w-md pointer-events-auto">
               <a
-                href="#platos-estrella"
+                href="#carta-completa"
                 className="flex-1 py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-extrabold text-[11px] sm:text-sm tracking-wider uppercase shadow-xl hover:bg-[#7D8B3F] active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer whitespace-nowrap"
               >
                 <span>Ver Platos</span>

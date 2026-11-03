@@ -19,10 +19,10 @@ export function HeaderNav({
 
   useEffect(() => {
     const handleScroll = () => {
-      const targetSection = document.getElementById("platos-estrella");
+      const targetSection = document.getElementById("carta-completa") || document.getElementById("menu");
       if (targetSection) {
         const rect = targetSection.getBoundingClientRect();
-        // Show header only once platos-estrella section begins entering the top of screen
+        // Show header only once carta-completa section begins entering the top of screen
         setScrolled(rect.top <= 100);
       } else {
         setScrolled(window.scrollY > window.innerHeight * 2);
@@ -73,16 +73,10 @@ export function HeaderNav({
             El Método (8 min)
           </a>
           <a
-            href="#platos-estrella"
-            className="hover:text-[#8F9E4B] transition-colors uppercase py-1"
-          >
-            Platos Estrella
-          </a>
-          <a
             href="#carta-completa"
             className="hover:text-[#8F9E4B] transition-colors uppercase py-1"
           >
-            Toda la Carta
+            Platos al Vacío
           </a>
           <a
             href="#por-que-vacio"

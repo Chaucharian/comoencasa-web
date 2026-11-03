@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { HeaderNav } from "./header-nav";
 import { HeroSection } from "./hero-section";
 import { MethodSection } from "./method-section";
-import { DishShowcaseSection } from "./dish-showcase-section";
 import { FullMenuSection } from "./full-menu-section";
 import { PackagingFeatureSection } from "./packaging-feature-section";
 import { CartDrawer } from "./cart-drawer";
@@ -46,24 +45,6 @@ export function LandingApp({ store }: LandingAppProps) {
     }
   }, [cart, isMounted]);
 
-  // Featured dishes for the showcase section (all vacuum-sealed)
-  const featuredDishes = store.dishes.filter(
-    (dish) =>
-      dish.featured ||
-      [
-        "carne-horno",
-        "bondiola-braseada",
-        "osobuco-malbec",
-        "bife-chorizo",
-        "pastel-papa",
-        "pollo-disco",
-        "pollo-crema",
-        "canelones",
-        "lasana",
-        "raviolones-calabaza",
-        "guiso-lentejas",
-      ].includes(dish.id)
-  );
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.qty, 0);
 
@@ -118,14 +99,6 @@ export function LandingApp({ store }: LandingAppProps) {
 
       {/* Hero Section with Sticky Video & Scroll-driven 3-Step Walkthrough */}
       <HeroSection />
-
-      {/* Individual Dish Showcase Section ("vendiéndote cada plato") */}
-      <DishShowcaseSection
-        featuredDishes={featuredDishes.length > 0 ? featuredDishes : store.dishes.slice(0, 5)}
-        onAddToCart={handleAddToCart}
-        onOpenCart={() => setIsCartOpen(true)}
-        whatsappNumber={store.whatsapp}
-      />
 
       {/* Full Catalog Menu Section with Filters */}
       <FullMenuSection

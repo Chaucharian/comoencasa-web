@@ -14,47 +14,158 @@
   "paymentNote": "Efectivo o transferencia. El pedido se confirma directo por WhatsApp.",
   "categories": [
     {
+      "id": "fitness",
+      "name": "Línea Fitness & Proteica",
+      "sort": 0
+    },
+    {
       "id": "carnes",
       "name": "Carnes al Vacío",
-      "sort": 0
+      "sort": 1
     },
     {
       "id": "pollos",
       "name": "Pollos al Vacío",
-      "sort": 1
+      "sort": 2
     },
     {
       "id": "pastas",
       "name": "Pastas al Vacío",
-      "sort": 2
+      "sort": 3
     },
     {
       "id": "ollas",
       "name": "Ollas y Guisos",
-      "sort": 3
+      "sort": 4
+    },
+    {
+      "id": "tortillas",
+      "name": "Tortillas y Tartas",
+      "sort": 5
     }
   ],
   "dishes": [
     {
-      "id": "carne-horno",
-      "categoryId": "carnes",
-      "name": "Carne al horno con salvia y batatas",
-      "description": "Tapa de asado braseada lentamente con salvia fresca, batatas glaseadas y reducción de fondo oscuro.",
-      "price": 13200,
-      "image": "/menu/carne-horno.jpg",
+      "id": "pechuga-fitness-romero",
+      "categoryId": "fitness",
+      "name": "Pechuga grillada con boniato y brócoli",
+      "description": "Suprema magra marinada con salvia, romero y limón, acompañada de cubos de boniato asado y brócoli al vapor. Ración alta en proteína y baja en sodio.",
+      "price": 11900,
+      "image": "/menu/pollo-crema.jpg",
       "available": true,
       "sort": 0,
+      "weight": "420g",
+      "regenTime": "6-8 min",
+      "method": "Herví la bolsa sin abrir 6 a 8 min · Abrí y serví",
+      "tag": "48G PROTEÍNA",
+      "highlight": "Cocción al vacío que retiene el 100% de la humedad natural del pollo y sus nutrientes esenciales.",
+      "featured": true,
+      "nutrition": {
+        "calories": 410,
+        "proteins": 48,
+        "carbs": 26,
+        "fats": 7,
+        "sodium": 420
+      }
+    },
+    {
+      "id": "lomo-fitness-calabaza",
+      "categoryId": "fitness",
+      "name": "Lomo magro braseado con calabaza asada",
+      "description": "Corte de carne vacuna magra seleccionado, braseado a baja temperatura con puré rústico de calabaza y semillas tostadas de zapallo.",
+      "price": 14800,
+      "image": "/menu/carne-horno.jpg",
+      "available": true,
+      "sort": 1,
       "weight": "450g",
       "regenTime": "8-10 min",
-      "method": "Herví la bolsa sin abrir 8 a 10 min",
+      "method": "Herví la bolsa sin abrir 8 a 10 min · Abrí y serví",
+      "tag": "52G PROTEÍNA",
+      "highlight": "52 gramos de proteína de alto valor biológico con apenas 11g de grasa natural del corte magro.",
+      "featured": true,
+      "nutrition": {
+        "calories": 475,
+        "proteins": 52,
+        "carbs": 18,
+        "fats": 11,
+        "sodium": 490
+      }
+    },
+    {
+      "id": "pastel-fitness-magro",
+      "categoryId": "fitness",
+      "name": "Pastel proteico de lomo y puré de calabaza",
+      "description": "Lomo magro picado a cuchillo con cebolla de verdeo y claras de huevo de campo, cubierto con puré suave de calabaza asada y toque de nuez moscada.",
+      "price": 12200,
+      "image": "/menu/pastel-papa.jpg",
+      "available": true,
+      "sort": 2,
+      "weight": "450g",
+      "regenTime": "8-10 min",
+      "method": "Herví la bolsa sin abrir 8 a 10 min · Abrí y serví",
+      "tag": "44G PROTEÍNA",
+      "highlight": "Reversión fitness del clásico pastel: reemplazamos la papa por calabaza asada y maximizamos la proteína magra.",
+      "featured": true,
+      "nutrition": {
+        "calories": 430,
+        "proteins": 44,
+        "carbs": 22,
+        "fats": 9,
+        "sodium": 480
+      }
+    },
+    {
+      "id": "tortilla-papas-cebolla",
+      "categoryId": "tortillas",
+      "name": "Tortilla de papas y cebolla caramelizada",
+      "description": "Tortilla española clásica con papas pochadas a fuego lento, cebolla confitada dulce y huevos de campo. Sellada al vacío en su punto justo (babé) para que al regenerarla quede cremosa y jugosa.",
+      "price": 10500,
+      "image": "/menu/tortilla.jpg",
+      "available": true,
+      "sort": 0,
+      "weight": "500g",
+      "regenTime": "6-8 min",
+      "method": "Sumergí la bolsa cerrada 6 a 8 min en agua caliente",
+      "tag": "PUNTO BABÉ",
+      "highlight": "Textura cremosa inigualable. El vacío preserva la humedad del huevo y el dulzor de la cebolla confitada sin secar la papa.",
+      "featured": true
+    },
+    {
+      "id": "tarta-jamon-queso",
+      "categoryId": "tortillas",
+      "name": "Tarta de jamón y queso",
+      "description": "Tarta individual con masa brisée hojaldrada, abundante jamón cocido natural y queso muzzarella fundente. Envasada al vacío sin conservantes.",
+      "price": 9800,
+      "image": "/menu/tarta.jpeg",
+      "available": true,
+      "sort": 1,
+      "weight": "450g",
+      "regenTime": "5 min",
+      "method": "Regenerá 5 min en agua caliente, horno o microondas",
+      "tag": "SIN CONSERVANTES",
+      "highlight": "Masa crocante y relleno extra cremoso que no pierde humedad gracias a la barrera impermeable del vacío.",
+      "featured": true
+    },
+    {
+      "id": "carne-horno",
+      "categoryId": "carnes",
+      "name": "Carne al horno con salvia y puré de batata",
+      "description": "Corte vacuno braseado lentamente con salvia fresca en su propio fondo oscuro, acompañado de puré de batata sedoso en pouch doble termo-sellado.",
+      "price": 13200,
+      "image": "/menu/carne_al_horno.jpeg",
+      "available": true,
+      "sort": 2,
+      "weight": "450g",
+      "regenTime": "8-10 min",
+      "method": "Herví la bolsa sin abrir 8 a 10 min · Abrí y serví",
       "tag": "100% CASERO",
-      "highlight": "La salvia fresca de huerta se infusiona con el fondo de cocción logrando un sabor profundo y reconfortante.",
+      "highlight": "El pouch doble separa la carne de su puré de batata para que ambos conserven su textura y aroma original al sumergir en agua hirviendo.",
       "featured": true
     },
     {
       "id": "bondiola-braseada",
       "categoryId": "carnes",
-      "name": "Bondiola braseada a la barbacoa con batatas",
+      "name": "Bondiola braseada con batatas",
       "description": "Bondiola de cerdo braseada durante 6 horas en reducción agridulce con batatas caramelizadas.",
       "price": 13800,
       "image": "/menu/bondiola.jpg",
@@ -166,17 +277,17 @@
     {
       "id": "canelones",
       "categoryId": "pastas",
-      "name": "Canelones de ricota y espinaca con salsa mixta",
-      "description": "Masa suave rellena de espinaca fresca salteada con ricota casera, bañados en salsa mixta y queso.",
+      "name": "Canelones de espinaca con salsa",
+      "description": "Canelones caseros rellenos de espinaca fresca salteada y ricota suave, cubiertos con abundante salsa bolognesa de carne y gratén de queso fundido.",
       "price": 10900,
-      "image": "/menu/canelones.jpg",
+      "image": "/menu/canelones.jpeg",
       "available": true,
       "sort": 8,
-      "weight": "400g",
+      "weight": "450g",
       "regenTime": "8-10 min",
-      "method": "Herví la bolsa sin abrir 8 a 10 min",
+      "method": "Herví la bolsa sin abrir 8 a 10 min · Abrí y serví",
       "tag": "PASTA CASERA",
-      "highlight": "Relleno cremoso y masa fina que recupera su punto óptimo en solo 8 minutos de hervor.",
+      "highlight": "Masa suave y relleno abundante de espinaca de estación, bañados en salsa bolognesa que se regenera homogénea sin secar la pasta.",
       "featured": true
     },
     {
@@ -230,17 +341,17 @@
     {
       "id": "guiso-lentejas",
       "categoryId": "ollas",
-      "name": "Guiso de lentejas casero con panceta y chorizo",
-      "description": "Lentejas pardinas con panceta ahumada, chorizo colorado, carne braseada y vegetales de huerta.",
+      "name": "Guiso de lentejas casero",
+      "description": "Guiso tradicional de lentejas pardinas cocidas a fuego lento con rodajas de chorizo colorado, papas tiernas, zanahorias y fondo especiado casero.",
       "price": 12400,
-      "image": "/menu/pollo-disco.jpg",
+      "image": "/menu/guiso.jpeg",
       "available": true,
       "sort": 12,
       "weight": "450g",
       "regenTime": "8-10 min",
-      "method": "Herví la bolsa sin abrir 8 a 10 min",
+      "method": "Herví la bolsa sin abrir 8 a 10 min · Abrí y serví",
       "tag": "DE OLLA DE HOGAR",
-      "highlight": "Caldo espeso y aromático, el plato de invierno perfecto listo en cualquier época del año.",
+      "highlight": "El chorizo colorado y las verduras concentran todo su sabor en el caldo espeso sellado al vacío, garantizando un plato reconfortante en minutos.",
       "featured": true
     }
   ]
