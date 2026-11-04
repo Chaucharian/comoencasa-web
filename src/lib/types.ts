@@ -29,6 +29,8 @@ export type Dish = {
   featured?: boolean;
   video?: string;
   nutrition?: NutritionInfo;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type DeliveryShift = {
@@ -58,6 +60,34 @@ export type Store = {
   paymentNote: string;
   categories: Category[];
   dishes: Dish[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type MediaAsset = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  base64: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FirebaseConnectionState =
+  | "connected"
+  | "api_disabled"
+  | "permission_denied"
+  | "not_configured"
+  | "error";
+
+export type FirebaseStatusInfo = {
+  configured: boolean;
+  state: FirebaseConnectionState;
+  projectId: string | null;
+  storageBucket: string | null;
+  message: string;
+  consoleUrl?: string;
 };
 
 export type CartLine = {

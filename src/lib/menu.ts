@@ -2,6 +2,8 @@ import type {
   CartLine,
   Category,
   Customer,
+  DeliverySchedule,
+  DeliveryShift,
   Dish,
   Fulfillment,
   NutritionInfo,
@@ -10,20 +12,25 @@ import type {
 } from "@/lib/types";
 
 export const FOOD_IMAGES = [
+  "/menu/tortilla.jpg",
+  "/menu/tarta.jpeg",
+  "/menu/carne_al_horno.jpeg",
+  "/menu/canelones.jpeg",
+  "/menu/guiso.jpeg",
+  "/menu/bondiola.jpg",
+  "/menu/osobuco.jpg",
+  "/menu/pollo-disco.jpg",
+  "/menu/pollo-crema.jpg",
+  "/menu/pastel-papa.jpg",
+  "/menu/lasana.jpg",
+  "/menu/carne-horno.jpg",
+  "/menu/canelones.jpg",
   "/menu/tarta-jamon.jpg",
   "/menu/tarta-acelga.jpg",
   "/menu/tarta-atun.jpg",
   "/menu/tarta-entera.jpg",
-  "/menu/canelones.jpg",
-  "/menu/pastel-papa.jpg",
-  "/menu/lasana.jpg",
   "/menu/empanadas.jpg",
-  "/menu/pollo-crema.jpg",
   "/menu/milanesa.jpg",
-  "/menu/carne-horno.jpg",
-  "/menu/bondiola.jpg",
-  "/menu/osobuco.jpg",
-  "/menu/pollo-disco.jpg",
   "/menu/ensalada.jpg",
   "/menu/flan.jpg",
   "/menu/budin.jpg",
@@ -32,8 +39,7 @@ export const FOOD_IMAGES = [
 
 export const COVER_IMAGES = ["/menu/hero.jpg", ...FOOD_IMAGES] as const;
 
-const IMAGE_PATH = /^\/menu\/[a-zA-Z0-9._-]+$/;
-const ID_PATTERN = /^[a-zA-Z0-9-]{1,40}$/;
+const ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -50,12 +56,38 @@ function money(value: unknown, max: number) {
   return Math.round(number);
 }
 
+function isValidImageSource(value: string): boolean {
+  if (/^\/menu\/[a-zA-Z0-9._-]+$/.test(value)) return true;
+  if (/^\/api\/media\/[a-zA-Z0-9._-]+$/.test(value)) return true;
+  if (/^https?:\/\/[^\s]+$/i.test(value)) return true;
+  if (/^data:image\/(jpeg|jpg|png|webp|gif|avif);base64,[a-zA-Z0-9+/=]+$/i.test(value)) {
+    return true;
+  }
+  return false;
+}
+
 function imagePath(value: unknown) {
   if (value == null || value === "") return null;
-  if (typeof value !== "string" || !IMAGE_PATH.test(value)) {
+  if (typeof value !== "string" || !isValidImageSource(value.trim())) {
     throw new Error("Hay una imagen con una ruta inválida.");
   }
-  return value;
+  return value.trim();
+}
+
+function parseDeliverySchedule(input: unknown): DeliverySchedule | undefined {
+  if (!isRecord(input)) return undefined;
+  const enabled = input.enabled !== false;
+  const rawShifts = Array.isArray(input.shifts) ? input.shifts : [];
+  const shifts: DeliveryShift[] = rawShifts
+    .filter(isRecord)
+    .map((s) => ({
+      from: text(s.from, 10) || "11:30",
+      to: text(s.to, 10) || "15:00",
+    }))
+    .slice(0, 4);
+
+  if (shifts.length === 0) return undefined;
+  return { enabled, shifts };
 }
 
 export function parseStore(input: unknown): Store {
@@ -81,8 +113,8 @@ export function parseStore(input: unknown): Store {
 
   const categories: Category[] = input.categories.map((item, index) => {
     if (!isRecord(item)) throw new Error("Hay una categoría inválida.");
-    const id = text(item.id, 40);
-    const categoryName = text(item.name, 40);
+    const id = text(item.id, 64);
+    const categoryName = text(item.name, 60);
     const sort = Number(item.sort);
     if (!ID_PATTERN.test(id) || !categoryName) {
       throw new Error("Cada categoría necesita un nombre.");
@@ -100,12 +132,14 @@ export function parseStore(input: unknown): Store {
 
   const categoryIds = new Set(categories.map((category) => category.id));
   const counters = new Map<string, number>();
+  const nowIso = new Date().toISOString();
+
   const dishes: Dish[] = input.dishes.map((item) => {
     if (!isRecord(item)) throw new Error("Hay un plato inválido.");
-    const id = text(item.id, 40);
-    const categoryId = text(item.categoryId, 40);
-    const dishName = text(item.name, 80);
-    const price = money(item.price, 2_000_000);
+    const id = text(item.id, 64);
+    const categoryId = text(item.categoryId, 64);
+    const dishName = text(item.name, 100);
+    const price = money(item.price, 5_000_000);
     if (!ID_PATTERN.test(id) || !dishName) {
       throw new Error("Cada plato necesita un nombre.");
     }
@@ -114,33 +148,57 @@ export function parseStore(input: unknown): Store {
     }
     if (price == null) throw new Error(`El precio de "${dishName}" no es válido.`);
     const sort = Number(item.sort);
-    return {
+
+    const dish: Dish = {
       id,
       categoryId,
       name: dishName,
-      description: text(item.description, 240),
+      description: text(item.description, 600),
       price,
       image: imagePath(item.image),
       available: item.available !== false,
       sort: Number.isFinite(sort) ? sort : 0,
-      weight: text(item.weight, 40) || undefined,
-      regenTime: text(item.regenTime, 40) || undefined,
-      method: text(item.method, 80) || undefined,
-      tag: text(item.tag, 40) || undefined,
-      highlight: text(item.highlight, 120) || undefined,
       featured: Boolean(item.featured),
-      video: typeof item.video === "string" ? item.video : undefined,
-      nutrition: isRecord(item.nutrition)
-        ? {
-            calories: Math.max(0, Number(item.nutrition.calories) || 0),
-            proteins: Math.max(0, Number(item.nutrition.proteins) || 0),
-            carbs: Math.max(0, Number(item.nutrition.carbs) || 0),
-            fats: Math.max(0, Number(item.nutrition.fats) || 0),
-            sodium: Number(item.nutrition.sodium) || undefined,
-          }
-        : undefined,
+      created_at: text(item.created_at, 40) || nowIso,
+      updated_at: text(item.updated_at, 40) || nowIso,
     };
+
+    const weight = text(item.weight, 60);
+    if (weight) dish.weight = weight;
+
+    const regenTime = text(item.regenTime, 60);
+    if (regenTime) dish.regenTime = regenTime;
+
+    const method = text(item.method, 200);
+    if (method) dish.method = method;
+
+    const tag = text(item.tag, 60);
+    if (tag) dish.tag = tag;
+
+    const highlight = text(item.highlight, 300);
+    if (highlight) dish.highlight = highlight;
+
+    if (typeof item.video === "string" && item.video.trim()) {
+      dish.video = item.video.trim();
+    }
+
+    if (isRecord(item.nutrition)) {
+      const nutrition: NutritionInfo = {
+        calories: Math.max(0, Number(item.nutrition.calories) || 0),
+        proteins: Math.max(0, Number(item.nutrition.proteins) || 0),
+        carbs: Math.max(0, Number(item.nutrition.carbs) || 0),
+        fats: Math.max(0, Number(item.nutrition.fats) || 0),
+      };
+      const sodium = Number(item.nutrition.sodium);
+      if (Number.isFinite(sodium) && sodium > 0) {
+        nutrition.sodium = sodium;
+      }
+      dish.nutrition = nutrition;
+    }
+
+    return dish;
   });
+
   const categoryOrder = new Map(categories.map((category, index) => [category.id, index]));
   dishes.sort(
     (a, b) =>
@@ -157,31 +215,40 @@ export function parseStore(input: unknown): Store {
     throw new Error("Hay platos repetidos.");
   }
 
-  const deliveryFee = money(input.deliveryFee, 200_000);
-  const deliveryMin = money(input.deliveryMin, 2_000_000);
+  const deliveryFee = money(input.deliveryFee, 500_000);
+  const deliveryMin = money(input.deliveryMin, 5_000_000);
   if (deliveryFee == null || deliveryMin == null) {
     throw new Error("El envío o el mínimo de delivery no es válido.");
   }
 
   const cover = imagePath(input.cover) ?? "/menu/hero.jpg";
+  const deliverySchedule = parseDeliverySchedule(input.deliverySchedule);
 
-  return {
+  const result: Store = {
     name,
-    tagline: text(input.tagline, 140),
+    tagline: text(input.tagline, 160),
     cover,
     whatsapp,
-    address: text(input.address, 160),
-    hours: text(input.hours, 160),
-    about: text(input.about, 400),
+    address: text(input.address, 180),
+    hours: text(input.hours, 180),
+    about: text(input.about, 600),
     open: input.open === true,
     pickupEnabled,
     deliveryEnabled,
     deliveryFee,
     deliveryMin,
-    paymentNote: text(input.paymentNote, 240),
+    paymentNote: text(input.paymentNote, 300),
     categories,
     dishes,
+    created_at: text(input.created_at, 40) || nowIso,
+    updated_at: text(input.updated_at, 40) || nowIso,
   };
+
+  if (deliverySchedule) {
+    result.deliverySchedule = deliverySchedule;
+  }
+
+  return result;
 }
 
 export function formatArs(value: number) {

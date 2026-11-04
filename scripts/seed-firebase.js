@@ -20,15 +20,36 @@ async function seed() {
 
   const raw = fs.readFileSync(path.join(__dirname, "../data/store.json"), "utf8");
   const storeData = JSON.parse(raw);
+  const now = new Date().toISOString();
 
   const payload = {
     ...storeData,
-    updated_at: new Date().toISOString()
+    created_at: storeData.created_at || now,
+    updated_at: now
   };
 
   console.log(`📦 Guardando la carta completa (${storeData.dishes?.length} platos, ${storeData.categories?.length} categorías)...`);
   const docRef = doc(db, "stores", "abriyservi");
   await setDoc(docRef, payload, { merge: true });
+
+  // Sincronizar también pedidos existentes en data/orders.json
+  const ordersPath = path.join(__dirname, "../data/orders.json");
+  if (fs.existsSync(ordersPath)) {
+    const ordersRaw = fs.readFileSync(ordersPath, "utf8");
+    const orders = JSON.parse(ordersRaw);
+    if (Array.isArray(orders) && orders.length > 0) {
+      console.log(`📋 Sincronizando ${orders.length} pedidos en la colección 'orders'...`);
+      for (const order of orders) {
+        if (order && order.id) {
+          await setDoc(doc(db, "orders", order.id), {
+            ...order,
+            created_at: order.created_at || now,
+            updated_at: order.updated_at || now
+          }, { merge: true });
+        }
+      }
+    }
+  }
 
   console.log("🔍 Verificando lectura desde Firestore...");
   const snap = await getDoc(docRef);

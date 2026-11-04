@@ -6,86 +6,129 @@ import {
   isFirebaseConfigured,
   getStoreFromFirebase,
   saveStoreToFirebase,
+  getFirebaseStatus,
 } from "@/lib/firebase";
 import type { Store } from "@/lib/types";
 
-// El archivo original por defecto que viene con el código
+// Archivo base del proyecto
 const defaultFile = path.join(process.cwd(), "data", "store.json");
 
-// El directorio temporal donde podemos escribir en serverless (/tmp)
+// Directorio temporal de lectura/escritura rápida (/tmp en serverless)
 const directory = path.join(os.tmpdir(), "abriyservi-data");
-const file = path.join(directory, "store.json");
+const tmpFile = path.join(directory, "store.json");
 
-export { isFirebaseConfigured };
+export { isFirebaseConfigured, getFirebaseStatus };
+
+async function readJsonStore(filePath: string): Promise<Store | null> {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const store = parseStore(parsed);
+    if (typeof parsed.updated_at === "string") {
+      store.updated_at = parsed.updated_at;
+    }
+    if (typeof parsed.created_at === "string") {
+      store.created_at = parsed.created_at;
+    }
+    return store;
+  } catch {
+    return null;
+  }
+}
+
+function getTimestampMs(iso?: string): number {
+  if (!iso) return 0;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+async function readNewestLocalStore(): Promise<Store> {
+  const [tmpStore, defaultStore] = await Promise.all([
+    readJsonStore(tmpFile),
+    readJsonStore(defaultFile),
+  ]);
+
+  if (tmpStore && defaultStore) {
+    return getTimestampMs(tmpStore.updated_at) >= getTimestampMs(defaultStore.updated_at)
+      ? tmpStore
+      : defaultStore;
+  }
+
+  if (tmpStore) return tmpStore;
+  if (defaultStore) return defaultStore;
+
+  throw new Error("No se pudo leer la carta.");
+}
+
+async function persistLocalFiles(store: Store): Promise<void> {
+  const serialized = `${JSON.stringify(store, null, 2)}\n`;
+
+  try {
+    await mkdir(directory, { recursive: true });
+    const tempSwap = `${tmpFile}.tmp`;
+    await writeFile(tempSwap, serialized);
+    await rename(tempSwap, tmpFile);
+  } catch (tmpErr) {
+    console.warn("No se pudo escribir en /tmp:", tmpErr);
+  }
+
+  try {
+    await writeFile(defaultFile, serialized);
+  } catch {
+    // En entornos serverless de solo lectura (ej. Vercel) se ignora silenciosamente
+  }
+}
 
 export async function readStore(): Promise<Store> {
-  // 1. Si Firebase está configurado, intentamos leer desde Firestore
+  const localStore = await readNewestLocalStore();
+
   if (isFirebaseConfigured()) {
     try {
       const firebaseStore = await getStoreFromFirebase();
       if (firebaseStore) {
-        // Guardar en cache local /tmp para mayor velocidad
-        try {
-          await mkdir(directory, { recursive: true });
-          await writeFile(file, `${JSON.stringify(firebaseStore, null, 2)}\n`);
-        } catch {
-          // Ignorar error de cache
+        const remoteTime = getTimestampMs(firebaseStore.updated_at);
+        const localTime = getTimestampMs(localStore.updated_at);
+
+        // Si la versión local es más reciente que la de Firestore, preservamos la local y sincronizamos
+        if (localTime > remoteTime) {
+          saveStoreToFirebase(localStore).catch(() => {});
+          return localStore;
         }
+
+        await persistLocalFiles(firebaseStore);
         return firebaseStore;
       }
 
-      // Si el documento aún no existe en Firebase, lo inicializamos con los datos por defecto
-      const rawDefault = await readFile(defaultFile, "utf8");
-      const defaultStore = parseStore(JSON.parse(rawDefault) as unknown);
-      await saveStoreToFirebase(defaultStore);
-      return defaultStore;
+      // Si no hay documento en Firestore o aún no se inicializó, sincronizamos en segundo plano sin bloquear
+      saveStoreToFirebase(localStore).catch(() => {});
     } catch (firebaseErr) {
       console.warn("Error leyendo de Firebase Firestore, usando respaldo local:", firebaseErr);
     }
   }
 
-  // 2. Respaldo local (/tmp o data/store.json)
-  try {
-    let raw: string;
-    try {
-      raw = await readFile(file, "utf8");
-    } catch {
-      raw = await readFile(defaultFile, "utf8");
-    }
-    return parseStore(JSON.parse(raw) as unknown);
-  } catch (error) {
-    if (error instanceof SyntaxError) throw new Error("No se pudo leer la carta.");
-    throw error;
-  }
+  return localStore;
 }
 
-export async function writeStore(store: Store) {
-  const clean = parseStore(store);
+export async function writeStore(store: Store): Promise<Store> {
+  const now = new Date().toISOString();
+  const clean = parseStore({
+    ...store,
+    created_at: store.created_at || now,
+    updated_at: now,
+  });
+  clean.created_at = store.created_at || now;
+  clean.updated_at = now;
 
-  // 1. Guardar en Firebase Firestore si está configurado
+  // 1. Persistir inmediatamente en disco local y /tmp (respuesta garantizada)
+  await persistLocalFiles(clean);
+
+  // 2. Guardar en Firebase Firestore si está configurado
   if (isFirebaseConfigured()) {
     try {
       await saveStoreToFirebase(clean);
     } catch (firebaseErr) {
       console.error("Error guardando en Firebase Firestore:", firebaseErr);
     }
-  }
-
-  // 2. Guardar en cache local temporal
-  try {
-    await mkdir(directory, { recursive: true });
-    const tmp = `${file}.tmp`;
-    await writeFile(tmp, `${JSON.stringify(clean, null, 2)}\n`);
-    await rename(tmp, file);
-  } catch (tmpErr) {
-    console.warn("No se pudo escribir en /tmp:", tmpErr);
-  }
-
-  // 3. Si estamos en desarrollo local, también actualizamos data/store.json
-  try {
-    await writeFile(defaultFile, `${JSON.stringify(clean, null, 2)}\n`);
-  } catch {
-    // En entornos de solo lectura (como Vercel) se ignora silenciosamente
   }
 
   return clean;

@@ -7,6 +7,29 @@ const nextConfig: NextConfig = {
     "localhost:3005",
     "localhost",
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
+      },
+    ],
+    localPatterns: [
+      {
+        pathname: "/menu/**",
+      },
+      {
+        pathname: "/brand/**",
+      },
+      {
+        pathname: "/api/media/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

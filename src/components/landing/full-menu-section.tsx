@@ -186,6 +186,11 @@ export function FullMenuSection({
                       src={dish.image}
                       alt={dish.name}
                       fill
+                      unoptimized={
+                        dish.image.startsWith("/api/media/") ||
+                        dish.image.startsWith("data:") ||
+                        dish.image.startsWith("http")
+                      }
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
@@ -399,6 +404,11 @@ export function FullMenuSection({
                     src={inspectedDish.image}
                     alt={inspectedDish.name}
                     fill
+                    unoptimized={
+                      inspectedDish.image.startsWith("/api/media/") ||
+                      inspectedDish.image.startsWith("data:") ||
+                      inspectedDish.image.startsWith("http")
+                    }
                     className="object-cover"
                     sizes="(max-width: 640px) 100vw, 600px"
                   />

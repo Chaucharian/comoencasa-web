@@ -8,7 +8,14 @@ import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/cn";
 import { COVER_IMAGES, FOOD_IMAGES, formatArs } from "@/lib/menu";
 import { getStoreScheduleStatus } from "@/lib/schedule";
-import type { Category, Dish, Store, Order, OrderStatus } from "@/lib/types";
+import type {
+  Category,
+  Dish,
+  FirebaseStatusInfo,
+  Order,
+  OrderStatus,
+  Store,
+} from "@/lib/types";
 import {
   ClipboardList,
   UtensilsCrossed,
@@ -38,10 +45,82 @@ import {
   RefreshCw,
   Ban,
   PackageCheck,
+  Upload,
+  Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const fieldClass =
   "h-11 w-full rounded-xl border border-[#DFD8C4] bg-white px-3.5 text-sm text-[#222421] outline-none placeholder:text-[#5E4B3C]/50 focus:border-[#8F9E4B] focus:ring-1 focus:ring-[#8F9E4B] transition-all";
+
+function shouldUnoptimizeImage(src?: string | null): boolean {
+  if (!src) return false;
+  return src.startsWith("/api/media/") || src.startsWith("data:") || src.startsWith("http");
+}
+
+/**
+ * Compress & resize an image in the browser to WebP (~50-90KB) for fast, free cloud storage
+ */
+async function compressImageForUpload(
+  file: File,
+  maxDimension = 900,
+  quality = 0.82,
+): Promise<File> {
+  if (typeof window === "undefined") return file;
+
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width >= height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const baseName = file.name.replace(/\.[^.]+$/, "") || "plato";
+          const compressed = new File([blob], `${baseName}.webp`, {
+            type: "image/webp",
+          });
+          resolve(compressed);
+        },
+        "image/webp",
+        quality,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
 
 function slugify(value: string) {
   const slug = value
@@ -66,14 +145,23 @@ export function AdminApp({
   store,
   initialOrders = [],
   isFirebase = false,
+  initialFirebaseStatus,
 }: {
   authed: boolean;
   store: Store | null;
   initialOrders?: Order[];
   isFirebase?: boolean;
+  initialFirebaseStatus?: FirebaseStatusInfo;
 }) {
   if (!authed || !store) return <Login />;
-  return <Editor initial={store} initialOrders={initialOrders} isFirebase={isFirebase} />;
+  return (
+    <Editor
+      initial={store}
+      initialOrders={initialOrders}
+      isFirebase={isFirebase}
+      initialFirebaseStatus={initialFirebaseStatus}
+    />
+  );
 }
 
 function Login() {
@@ -150,10 +238,12 @@ function Editor({
   initial,
   initialOrders = [],
   isFirebase = false,
+  initialFirebaseStatus,
 }: {
   initial: Store;
   initialOrders?: Order[];
   isFirebase?: boolean;
+  initialFirebaseStatus?: FirebaseStatusInfo;
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdminTab>("orders");
@@ -172,9 +262,24 @@ function Editor({
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>("all");
   const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+  const [firebaseStatus, setFirebaseStatus] = useState<FirebaseStatusInfo | undefined>(
+    initialFirebaseStatus,
+  );
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   const categories = draft.categories.slice().sort((a, b) => a.sort - b.sort);
+
+  // Load uploaded images gallery on mount
+  useEffect(() => {
+    fetch("/api/admin/upload")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { images?: string[] } | null) => {
+        if (data?.images?.length) {
+          setUploads((prev) => Array.from(new Set([...prev, ...(data.images || [])])));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Poll orders periodically
   useEffect(() => {
@@ -235,6 +340,52 @@ function Editor({
     }
   }
 
+  async function persistStore(nextStore: Store, customMessage?: string): Promise<boolean> {
+    setPending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/store", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(nextStore),
+      });
+      const data = (await response.json()) as Store & {
+        error?: string;
+        firebaseStatus?: FirebaseStatusInfo;
+      };
+      setPending(false);
+
+      if (response.status === 401) {
+        router.refresh();
+        return false;
+      }
+      if (!response.ok) {
+        setError(data.error ?? "No se pudo guardar en la base de datos.");
+        return false;
+      }
+
+      const { firebaseStatus: nextFbStatus, ...cleanStore } = data;
+      if (nextFbStatus) {
+        setFirebaseStatus(nextFbStatus);
+      }
+
+      setDraft(cleanStore);
+      setSaved(cleanStore);
+      setStatus(
+        customMessage ||
+          (nextFbStatus?.state === "connected"
+            ? "Cambios guardados y sincronizados en Firebase Firestore."
+            : "Cambios guardados en la base de datos."),
+      );
+      router.refresh();
+      return true;
+    } catch (err) {
+      setPending(false);
+      setError(err instanceof Error ? err.message : "Error de red al guardar.");
+      return false;
+    }
+  }
+
   function patch(partial: Partial<Store>) {
     setDraft((current) => ({ ...current, ...partial }));
     setStatus(null);
@@ -251,21 +402,20 @@ function Editor({
   }
 
   function moveCategory(id: string, direction: -1 | 1) {
-    setDraft((current) => {
-      const ordered = current.categories.slice().sort((a, b) => a.sort - b.sort);
-      const index = ordered.findIndex((category) => category.id === id);
-      const other = ordered[index + direction];
-      if (!other) return current;
-      return {
-        ...current,
-        categories: current.categories.map((category) => {
-          if (category.id === id) return { ...category, sort: other.sort };
-          if (category.id === other.id) return { ...category, sort: ordered[index].sort };
-          return category;
-        }),
-      };
-    });
-    setStatus(null);
+    const ordered = draft.categories.slice().sort((a, b) => a.sort - b.sort);
+    const index = ordered.findIndex((category) => category.id === id);
+    const other = ordered[index + direction];
+    if (!other) return;
+    const nextStore: Store = {
+      ...draft,
+      categories: draft.categories.map((category) => {
+        if (category.id === id) return { ...category, sort: other.sort };
+        if (category.id === other.id) return { ...category, sort: ordered[index].sort };
+        return category;
+      }),
+    };
+    setDraft(nextStore);
+    void persistStore(nextStore, "Orden de categorías actualizado.");
   }
 
   function removeCategory(category: Category) {
@@ -274,74 +424,81 @@ function Editor({
       ? `¿Eliminar la categoría "${category.name}" y sus ${count} platos?`
       : `¿Eliminar la categoría "${category.name}"?`;
     if (!window.confirm(message)) return;
-    setDraft((current) => ({
-      ...current,
-      categories: current.categories.filter((item) => item.id !== category.id),
-      dishes: current.dishes.filter((dish) => dish.categoryId !== category.id),
-    }));
-    setStatus(null);
+    const nextStore: Store = {
+      ...draft,
+      categories: draft.categories.filter((item) => item.id !== category.id),
+      dishes: draft.dishes.filter((dish) => dish.categoryId !== category.id),
+    };
+    setDraft(nextStore);
+    void persistStore(nextStore, `Categoría "${category.name}" eliminada.`);
   }
 
   function addCategory() {
     const name = categoryName.trim();
     if (!name) return;
-    setDraft((current) => ({
-      ...current,
+    const nextStore: Store = {
+      ...draft,
       categories: [
-        ...current.categories,
+        ...draft.categories,
         {
-          id: uniqueId(slugify(name), current.categories.map((c) => c.id)),
+          id: uniqueId(slugify(name), draft.categories.map((c) => c.id)),
           name,
-          sort: current.categories.length,
+          sort: draft.categories.length,
         },
       ],
-    }));
+    };
     setCategoryName("");
-    setStatus(null);
+    setDraft(nextStore);
+    void persistStore(nextStore, `Categoría "${name}" creada.`);
   }
 
   function updateDish(id: string, partial: Partial<Dish>) {
-    setDraft((current) => ({
-      ...current,
-      dishes: current.dishes.map((dish) => (dish.id === id ? { ...dish, ...partial } : dish)),
-    }));
-    setStatus(null);
+    const now = new Date().toISOString();
+    const nextStore: Store = {
+      ...draft,
+      dishes: draft.dishes.map((dish) =>
+        dish.id === id ? { ...dish, ...partial, updated_at: now } : dish,
+      ),
+    };
+    setDraft(nextStore);
+    void persistStore(nextStore, "Estado del plato actualizado en la base de datos.");
   }
 
   function moveDish(id: string, direction: -1 | 1) {
-    setDraft((current) => {
-      const dish = current.dishes.find((item) => item.id === id);
-      if (!dish) return current;
-      const siblings = current.dishes
-        .filter((item) => item.categoryId === dish.categoryId)
-        .sort((a, b) => a.sort - b.sort);
-      const index = siblings.findIndex((item) => item.id === id);
-      const other = siblings[index + direction];
-      if (!other) return current;
-      return {
-        ...current,
-        dishes: current.dishes.map((item) => {
-          if (item.id === id) return { ...item, sort: other.sort };
-          if (item.id === other.id) return { ...item, sort: dish.sort };
-          return item;
-        }),
-      };
-    });
-    setStatus(null);
+    const dish = draft.dishes.find((item) => item.id === id);
+    if (!dish) return;
+    const siblings = draft.dishes
+      .filter((item) => item.categoryId === dish.categoryId)
+      .sort((a, b) => a.sort - b.sort);
+    const index = siblings.findIndex((item) => item.id === id);
+    const other = siblings[index + direction];
+    if (!other) return;
+    const nextStore: Store = {
+      ...draft,
+      dishes: draft.dishes.map((item) => {
+        if (item.id === id) return { ...item, sort: other.sort };
+        if (item.id === other.id) return { ...item, sort: dish.sort };
+        return item;
+      }),
+    };
+    setDraft(nextStore);
+    void persistStore(nextStore, "Orden del plato actualizado.");
   }
 
   function removeDish(dish: Dish) {
     if (!window.confirm(`¿Eliminar "${dish.name}" de la carta?`)) return;
-    setDraft((current) => ({
-      ...current,
-      dishes: current.dishes.filter((item) => item.id !== dish.id),
-    }));
-    setStatus(null);
+    const nextStore: Store = {
+      ...draft,
+      dishes: draft.dishes.filter((item) => item.id !== dish.id),
+    };
+    setDraft(nextStore);
+    void persistStore(nextStore, `Plato "${dish.name}" eliminado de la carta.`);
   }
 
   function openNewDish(categoryId?: string) {
     const targetCat = categoryId || categories[0]?.id || "viandas";
     const siblings = draft.dishes.filter((d) => d.categoryId === targetCat);
+    const now = new Date().toISOString();
     setCreating(true);
     setEditing({
       id: crypto.randomUUID(),
@@ -358,56 +515,62 @@ function Editor({
       tag: "",
       highlight: "",
       featured: false,
+      created_at: now,
+      updated_at: now,
     });
   }
 
-  function commitDish() {
+  async function commitDish() {
     if (!editing) return;
-    if (!editing.name.trim()) return;
-    setDraft((current) => ({
-      ...current,
+    const trimmedName = editing.name.trim();
+    if (!trimmedName) return;
+
+    const now = new Date().toISOString();
+    const updatedDish: Dish = {
+      ...editing,
+      name: trimmedName,
+      created_at: editing.created_at || now,
+      updated_at: now,
+    };
+
+    const nextStore: Store = {
+      ...draft,
       dishes: creating
-        ? [...current.dishes, { ...editing, name: editing.name.trim() }]
-        : current.dishes.map((dish) =>
-            dish.id === editing.id ? { ...editing, name: editing.name.trim() } : dish,
-          ),
-    }));
-    setEditing(null);
-    setCreating(false);
-    setStatus(null);
+        ? [...draft.dishes, updatedDish]
+        : draft.dishes.map((dish) => (dish.id === editing.id ? updatedDish : dish)),
+    };
+
+    setDraft(nextStore);
+    const ok = await persistStore(
+      nextStore,
+      creating
+        ? `Plato "${trimmedName}" creado y guardado en la base de datos.`
+        : `Plato "${trimmedName}" actualizado y guardado en la base de datos.`,
+    );
+
+    if (ok) {
+      setEditing(null);
+      setCreating(false);
+    }
   }
 
   async function upload(file: File) {
+    const optimizedFile = await compressImageForUpload(file, 900, 0.82);
     const body = new FormData();
-    body.set("file", file);
+    body.set("file", optimizedFile);
     const response = await fetch("/api/admin/upload", { method: "POST", body });
-    const data = (await response.json()) as { path?: string; error?: string };
+    const data = (await response.json()) as {
+      path?: string;
+      provider?: string;
+      error?: string;
+    };
     if (!response.ok || !data.path) throw new Error(data.error ?? "No se pudo subir la foto.");
-    setUploads((current) => [data.path as string, ...current]);
+    setUploads((current) => Array.from(new Set([data.path as string, ...current])));
     return data.path;
   }
 
   async function publish() {
-    setPending(true);
-    setError(null);
-    const response = await fetch("/api/admin/store", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(draft),
-    });
-    const data = (await response.json()) as Store & { error?: string };
-    setPending(false);
-    if (response.status === 401) {
-      router.refresh();
-      return;
-    }
-    if (!response.ok) {
-      setError(data.error ?? "No se pudo publicar.");
-      return;
-    }
-    setDraft(data);
-    setSaved(data);
-    setStatus(isFirebase ? "Carta publicada y sincronizada con Firestore." : "Carta guardada localmente.");
+    await persistStore(draft);
   }
 
   // Filtered dishes for Tab 2
@@ -457,15 +620,24 @@ function Editor({
 
             {/* Cloud Status badge */}
             <div className="hidden sm:block">
-              {isFirebase ? (
+              {firebaseStatus?.state === "connected" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 border border-emerald-500/20">
                   <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Firestore Conectado
                 </span>
+              ) : isFirebase ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("database")}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-800 border border-amber-500/20 hover:bg-amber-500/20 cursor-pointer transition-colors"
+                >
+                  <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  DB Activa · Ver Estado Firebase
+                </button>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-800 border border-amber-500/20">
                   <span className="size-1.5 rounded-full bg-amber-500" />
-                  Modo Local (.env)
+                  Base de Datos Local Activa
                 </span>
               )}
             </div>
@@ -477,7 +649,14 @@ function Editor({
               type="button"
               role="switch"
               aria-checked={draft.open}
-              onClick={() => patch({ open: !draft.open })}
+              onClick={() => {
+                const nextStore = { ...draft, open: !draft.open };
+                setDraft(nextStore);
+                void persistStore(
+                  nextStore,
+                  nextStore.open ? "Local abierto para pedidos." : "Local cerrado temporalmente.",
+                );
+              }}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-heading font-black uppercase tracking-wider transition-all cursor-pointer shadow-2xs",
                 draft.open
@@ -1013,6 +1192,7 @@ function Editor({
                             alt={dish.name}
                             fill
                             sizes="80px"
+                            unoptimized={shouldUnoptimizeImage(dish.image)}
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
@@ -1491,19 +1671,54 @@ function Editor({
             <div className="rounded-3xl border border-[#DFD8C4] bg-white p-6 shadow-2xs space-y-4">
               <h3 className="font-heading text-base font-black uppercase text-[#222421] border-b border-[#DFD8C4]/60 pb-2.5 flex items-center gap-2">
                 <Cloud size={16} className="text-[#8F9E4B]" />
-                <span>Estado de la Nube</span>
+                <span>Estado de la Base de Datos & Storage</span>
               </h3>
 
-              <div className="rounded-2xl bg-[#FFFDF2] border border-[#DFD8C4] p-4 text-xs space-y-2">
+              {firebaseStatus && firebaseStatus.state !== "connected" && isFirebase && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 space-y-2">
+                  <div className="flex items-center gap-2 font-heading font-black uppercase text-amber-900">
+                    <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                    <span>Acción recomendada en Firebase ({firebaseStatus.projectId})</span>
+                  </div>
+                  <p className="leading-relaxed text-[#5E4B3C]">
+                    {firebaseStatus.message}
+                  </p>
+                  {firebaseStatus.consoleUrl && (
+                    <a
+                      href={firebaseStatus.consoleUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-[11px] font-heading font-black uppercase tracking-wider text-white hover:bg-amber-700 transition-colors"
+                    >
+                      <span>Abrir Consola de Firebase Firestore</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              <div className="rounded-2xl bg-[#FFFDF2] border border-[#DFD8C4] p-4 text-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="font-heading font-bold text-[#5E4B3C]">Motor de Base de Datos:</span>
                   <span className="font-black text-[#222421]">
-                    {isFirebase ? "Google Cloud Firestore" : "Almacenamiento Local JSON"}
+                    {firebaseStatus?.state === "connected"
+                      ? `Google Cloud Firestore (${firebaseStatus.projectId})`
+                      : isFirebase
+                        ? `Híbrido (Base Local + Firebase ${firebaseStatus?.projectId || ""})`
+                        : "Base de Datos Local JSON"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-[#5E4B3C]">Colección:</span>
-                  <span className="font-mono text-[#222421]">stores / abriyservi & orders</span>
+                  <span className="font-heading font-bold text-[#5E4B3C]">Storage de Fotos:</span>
+                  <span className="font-black text-[#668032]">
+                    {isFirebase
+                      ? "Firebase Storage + Firestore Media (WebP Optimizado Gratis)"
+                      : "Almacenamiento Local (/menu & /api/media)"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-[#5E4B3C]">Colecciones:</span>
+                  <span className="font-mono text-[#222421]">stores/abriyservi · orders · media</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-heading font-bold text-[#5E4B3C]">Total Platos:</span>
@@ -1513,6 +1728,14 @@ function Editor({
                   <span className="font-heading font-bold text-[#5E4B3C]">Total Pedidos Registrados:</span>
                   <span className="font-black text-[#8F9E4B]">{orders.length}</span>
                 </div>
+                {draft.updated_at && (
+                  <div className="flex items-center justify-between border-t border-[#DFD8C4]/60 pt-2">
+                    <span className="font-heading font-bold text-[#5E4B3C]">Última actualización:</span>
+                    <span className="font-mono text-[11px] text-[#222421]">
+                      {new Date(draft.updated_at).toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2">
@@ -1523,7 +1746,7 @@ function Editor({
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#8F9E4B] py-3 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] disabled:opacity-50 transition-all cursor-pointer"
                 >
                   <Cloud size={16} />
-                  <span>Sincronizar y Forzar Guardado en Firestore</span>
+                  <span>{pending ? "Sincronizando…" : "Sincronizar y Forzar Guardado en Base de Datos"}</span>
                 </button>
               </div>
             </div>
@@ -1573,6 +1796,7 @@ function Editor({
         categories={categories}
         uploads={uploads}
         isCreating={creating}
+        isSaving={pending}
         onChange={setEditing}
         onClose={() => {
           setEditing(null);
@@ -1594,6 +1818,7 @@ function DishModal({
   categories,
   uploads,
   isCreating,
+  isSaving,
   onChange,
   onClose,
   onCommit,
@@ -1604,12 +1829,16 @@ function DishModal({
   categories: Category[];
   uploads: string[];
   isCreating: boolean;
+  isSaving: boolean;
   onChange: (dish: Dish) => void;
   onClose: () => void;
-  onCommit: () => void;
+  onCommit: () => Promise<void> | void;
   onUpload: (file: File) => Promise<string>;
   onUploadError: (message: string) => void;
 }) {
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
   const allImages = useMemo(() => {
     return [
       ...new Set([
@@ -1627,6 +1856,7 @@ function DishModal({
     proteins: 35,
     carbs: 28,
     fats: 12,
+    sodium: 480,
   };
 
   return (
@@ -1645,7 +1875,7 @@ function DishModal({
                   {isCreating ? "Crear Nuevo Plato" : "Editar Plato"}
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-[#5E4B3C]/75">
-                  Completá los datos del plato y sus especificaciones al vacío.
+                  Al guardar, los cambios se actualizan directamente en la base de datos y en la web.
                 </Dialog.Description>
               </div>
 
@@ -1740,6 +1970,19 @@ function DishModal({
                     className="mt-1 w-full rounded-xl border border-[#DFD8C4] bg-white p-3 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                    Detalle Destacado del Vacío (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={dish.highlight || ""}
+                    onChange={(e) => onChange({ ...dish, highlight: e.target.value })}
+                    placeholder="Ej: Cocción al vacío que retiene el 100% de los jugos naturales..."
+                    className={`${fieldClass} mt-1`}
+                  />
+                </div>
               </div>
 
               {/* 2. Vacuum & Regenerate Specs */}
@@ -1800,7 +2043,7 @@ function DishModal({
                   <span className="text-[10px] text-[#5E4B3C]/70">Por porción</span>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   <div>
                     <label className="block text-[10px] font-heading font-bold uppercase text-[#5E4B3C]">
                       Calorías
@@ -1880,66 +2123,164 @@ function DishModal({
                       className="h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-center text-xs font-bold"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-[10px] font-heading font-bold uppercase text-[#5E4B3C]">
+                      Sodio (mg)
+                    </label>
+                    <input
+                      type="number"
+                      value={currentNutri.sodium || 0}
+                      onChange={(e) =>
+                        onChange({
+                          ...dish,
+                          nutrition: {
+                            ...currentNutri,
+                            sodium: Number(e.target.value) || 0,
+                          },
+                        })
+                      }
+                      className="h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-center text-xs font-bold"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* 4. Dish Photo */}
+              {/* 4. Dish Photo (Upload & Gallery) */}
               <div className="rounded-2xl border border-[#DFD8C4] bg-white p-4 space-y-3 shadow-2xs">
-                <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] block">
-                  4. Foto del Plato
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] block">
+                    4. Foto del Plato
+                  </span>
+                  <span className="text-[10px] text-[#5E4B3C]/70">
+                    Compresión WebP automática · Cloud & Local
+                  </span>
+                </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...dish, image: null })}
-                    className={cn(
-                      "flex size-16 shrink-0 flex-col items-center justify-center rounded-xl border text-[10px] font-heading font-bold uppercase cursor-pointer transition-all",
-                      dish.image === null
-                        ? "border-[#8F9E4B] bg-[#8F9E4B]/10 text-[#668032] ring-2 ring-[#8F9E4B]"
-                        : "border-[#DFD8C4] bg-[#FFFDF2] text-[#5E4B3C]",
+                {/* Current Image Preview + Upload Action */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 rounded-xl bg-[#FFFDF2] border border-[#DFD8C4] p-3">
+                  <div className="relative h-24 w-full sm:w-28 shrink-0 overflow-hidden rounded-xl border border-[#DFD8C4] bg-white">
+                    {dish.image ? (
+                      <Image
+                        src={dish.image}
+                        alt={dish.name || "Vista previa"}
+                        fill
+                        sizes="112px"
+                        unoptimized={shouldUnoptimizeImage(dish.image)}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center text-[#5E4B3C]/40 gap-1">
+                        <ImageIcon size={22} />
+                        <span className="text-[9px] font-heading font-bold uppercase">Sin foto</span>
+                      </div>
                     )}
-                  >
-                    <span>Sin foto</span>
-                  </button>
+                  </div>
 
-                  {allImages.map((src) => (
-                    <button
-                      key={src}
-                      type="button"
-                      onClick={() => onChange({ ...dish, image: src })}
-                      className={cn(
-                        "relative size-16 shrink-0 overflow-hidden rounded-xl border cursor-pointer transition-all",
-                        dish.image === src
-                          ? "border-[#8F9E4B] ring-2 ring-[#8F9E4B]"
-                          : "border-[#DFD8C4] hover:opacity-80",
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-xl bg-[#8F9E4B] px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider text-white shadow-sm hover:bg-[#7D8B3F] transition-all cursor-pointer",
+                          uploadingPhoto && "opacity-60 pointer-events-none",
+                        )}
+                      >
+                        {uploadingPhoto ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            <span>Subiendo foto…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={14} />
+                            <span>Subir Foto desde tu dispositivo</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+                          className="sr-only"
+                          disabled={uploadingPhoto}
+                          onChange={async (event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (!file) return;
+                            setUploadingPhoto(true);
+                            setUploadNotice(null);
+                            try {
+                              const uploadedPath = await onUpload(file);
+                              onChange({ ...dish, image: uploadedPath });
+                              setUploadNotice("¡Foto optimizada y cargada con éxito!");
+                            } catch (err) {
+                              onUploadError(
+                                err instanceof Error ? err.message : "Error al subir la imagen.",
+                              );
+                            } finally {
+                              setUploadingPhoto(false);
+                            }
+                          }}
+                        />
+                      </label>
+
+                      {dish.image && (
+                        <button
+                          type="button"
+                          onClick={() => onChange({ ...dish, image: null })}
+                          className="rounded-xl border border-[#DFD8C4] bg-white px-3 py-2 text-[11px] font-heading font-bold uppercase text-[#5E4B3C] hover:text-red-600 transition-colors cursor-pointer"
+                        >
+                          Quitar foto
+                        </button>
                       )}
-                    >
-                      <Image src={src} alt="" fill sizes="64px" className="object-cover" />
-                    </button>
-                  ))}
+                    </div>
 
-                  <label className="flex size-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#8F9E4B] bg-[#8F9E4B]/5 text-[10px] font-heading font-bold uppercase text-[#8F9E4B] hover:bg-[#8F9E4B]/10 transition-colors">
-                    <span>+ Subir</span>
+                    {uploadNotice && (
+                      <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                        <Check size={12} />
+                        <span>{uploadNotice}</span>
+                      </p>
+                    )}
+
                     <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="sr-only"
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (!file) return;
-                        try {
-                          const uploadedPath = await onUpload(file);
-                          onChange({ ...dish, image: uploadedPath });
-                        } catch (err) {
-                          onUploadError(
-                            err instanceof Error ? err.message : "Error al subir la imagen.",
-                          );
-                        }
-                      }}
+                      type="text"
+                      value={dish.image || ""}
+                      onChange={(e) =>
+                        onChange({ ...dish, image: e.target.value.trim() || null })
+                      }
+                      placeholder="O pegá una ruta / URL de imagen (ej: /menu/bondiola.jpg o https://...)"
+                      className="h-8 w-full rounded-lg border border-[#DFD8C4] bg-white px-2.5 text-[11px] text-[#222421] outline-none focus:border-[#8F9E4B]"
                     />
-                  </label>
+                  </div>
+                </div>
+
+                {/* Quick Gallery Picker */}
+                <div>
+                  <span className="text-[10px] font-heading font-bold uppercase text-[#5E4B3C]/80 block mb-1.5">
+                    Galería rápida (tus fotos subidas y catálogo):
+                  </span>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {allImages.map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => onChange({ ...dish, image: src })}
+                        className={cn(
+                          "relative size-16 shrink-0 overflow-hidden rounded-xl border cursor-pointer transition-all",
+                          dish.image === src
+                            ? "border-[#8F9E4B] ring-2 ring-[#8F9E4B]"
+                            : "border-[#DFD8C4] hover:opacity-80",
+                        )}
+                      >
+                        <Image
+                          src={src}
+                          alt=""
+                          fill
+                          sizes="64px"
+                          unoptimized={shouldUnoptimizeImage(src)}
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1979,18 +2320,28 @@ function DishModal({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSaving}
                 className="rounded-full px-4 py-2 text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C] hover:bg-gray-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                disabled={!dish.name.trim()}
+                disabled={!dish.name.trim() || isSaving || uploadingPhoto}
                 onClick={onCommit}
                 className="flex items-center gap-1.5 rounded-full bg-[#8F9E4B] px-6 py-2.5 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] disabled:opacity-50 transition-all cursor-pointer"
               >
-                <Check size={14} />
-                <span>{isCreating ? "Crear Plato" : "Guardar Cambios"}</span>
+                {isSaving ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Guardando en DB…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>{isCreating ? "Crear y Guardar Plato" : "Guardar Cambios"}</span>
+                  </>
+                )}
               </button>
             </div>
           </Dialog.Content>
