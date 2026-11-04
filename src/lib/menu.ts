@@ -240,9 +240,17 @@ export function parseStore(input: unknown): Store {
     paymentNote: text(input.paymentNote, 300),
     categories,
     dishes,
-    created_at: text(input.created_at, 40) || nowIso,
-    updated_at: text(input.updated_at, 40) || nowIso,
   };
+
+  const createdAt = text(input.created_at, 40);
+  if (createdAt) {
+    result.created_at = createdAt;
+  }
+
+  const updatedAt = text(input.updated_at, 40);
+  if (updatedAt) {
+    result.updated_at = updatedAt;
+  }
 
   if (deliverySchedule) {
     result.deliverySchedule = deliverySchedule;

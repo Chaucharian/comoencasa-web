@@ -36,25 +36,11 @@ async function readJsonStore(filePath: string): Promise<Store | null> {
   }
 }
 
-function getTimestampMs(iso?: string): number {
-  if (!iso) return 0;
-  const ms = Date.parse(iso);
-  return Number.isFinite(ms) ? ms : 0;
-}
-
-async function readNewestLocalStore(): Promise<Store> {
-  const [tmpStore, defaultStore] = await Promise.all([
-    readJsonStore(tmpFile),
-    readJsonStore(defaultFile),
-  ]);
-
-  if (tmpStore && defaultStore) {
-    return getTimestampMs(tmpStore.updated_at) >= getTimestampMs(defaultStore.updated_at)
-      ? tmpStore
-      : defaultStore;
-  }
-
+async function readLocalFallbackStore(): Promise<Store> {
+  const tmpStore = await readJsonStore(tmpFile);
   if (tmpStore) return tmpStore;
+
+  const defaultStore = await readJsonStore(defaultFile);
   if (defaultStore) return defaultStore;
 
   throw new Error("No se pudo leer la carta.");
@@ -80,33 +66,21 @@ async function persistLocalFiles(store: Store): Promise<void> {
 }
 
 export async function readStore(): Promise<Store> {
-  const localStore = await readNewestLocalStore();
-
+  // 1. Firestore es la única fuente de verdad en producción y desarrollo
   if (isFirebaseConfigured()) {
     try {
       const firebaseStore = await getStoreFromFirebase();
       if (firebaseStore) {
-        const remoteTime = getTimestampMs(firebaseStore.updated_at);
-        const localTime = getTimestampMs(localStore.updated_at);
-
-        // Si la versión local es más reciente que la de Firestore, preservamos la local y sincronizamos
-        if (localTime > remoteTime) {
-          saveStoreToFirebase(localStore).catch(() => {});
-          return localStore;
-        }
-
         await persistLocalFiles(firebaseStore);
         return firebaseStore;
       }
-
-      // Si no hay documento en Firestore o aún no se inicializó, sincronizamos en segundo plano sin bloquear
-      saveStoreToFirebase(localStore).catch(() => {});
     } catch (firebaseErr) {
       console.warn("Error leyendo de Firebase Firestore, usando respaldo local:", firebaseErr);
     }
   }
 
-  return localStore;
+  // 2. Respaldo local (/tmp o data/store.json) solo si Firestore no respondió
+  return readLocalFallbackStore();
 }
 
 export async function writeStore(store: Store): Promise<Store> {
@@ -119,17 +93,19 @@ export async function writeStore(store: Store): Promise<Store> {
   clean.created_at = store.created_at || now;
   clean.updated_at = now;
 
-  // 1. Persistir inmediatamente en disco local y /tmp (respuesta garantizada)
-  await persistLocalFiles(clean);
-
-  // 2. Guardar en Firebase Firestore si está configurado
+  // 1. Guardar primero en Firebase Firestore (fuente de verdad en producción)
   if (isFirebaseConfigured()) {
-    try {
-      await saveStoreToFirebase(clean);
-    } catch (firebaseErr) {
-      console.error("Error guardando en Firebase Firestore:", firebaseErr);
+    const savedInCloud = await saveStoreToFirebase(clean);
+    if (!savedInCloud) {
+      const status = getFirebaseStatus();
+      throw new Error(
+        status.message || "No se pudo guardar en Firebase Firestore. Revisá la conexión.",
+      );
     }
   }
+
+  // 2. Actualizar caché local (/tmp y data/store.json)
+  await persistLocalFiles(clean);
 
   return clean;
 }

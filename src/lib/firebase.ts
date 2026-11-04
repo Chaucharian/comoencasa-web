@@ -42,7 +42,17 @@ const COLLECTION_NAME = "stores";
 const DOCUMENT_ID = "abriyservi";
 const MEDIA_COLLECTION = "media";
 
-let lastConnectionState: FirebaseConnectionState = "not_configured";
+// Configuración pública de respaldo del proyecto Firebase para garantizar conexión en producción (Vercel)
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBObuvyLsyMh5Ly-Uf0svX0EwFCDRH9qoU",
+  authDomain: "abri-servi.firebaseapp.com",
+  projectId: "abri-servi",
+  storageBucket: "abri-servi.firebasestorage.app",
+  messagingSenderId: "570318467650",
+  appId: "1:570318467650:web:82b6d8d698bf4734a4b3db",
+};
+
+let lastConnectionState: FirebaseConnectionState = "connected";
 let lastErrorMessage = "";
 let webFirestoreInitialized = false;
 
@@ -54,11 +64,11 @@ function cleanForFirestore<T>(data: T): T {
 }
 
 /**
- * Non-blocking timeout wrapper so uninitialized/disabled Firestore never hangs requests
+ * Timeout wrapper with generous serverless cold-start budget (8s)
  */
 function withTimeout<T>(
   promise: Promise<T>,
-  ms = 2500,
+  ms = 8000,
   onError?: (err: unknown) => void,
 ): Promise<T | null> {
   return new Promise((resolve) => {
@@ -96,65 +106,54 @@ function recordFirebaseError(err: unknown) {
   }
 }
 
-export function getFirebaseProjectId(): string | null {
+export function getFirebaseProjectId(): string {
   return (
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID ||
-    null
+    DEFAULT_FIREBASE_CONFIG.projectId
   );
 }
 
-export function getFirebaseStorageBucket(): string | null {
-  const projectId = getFirebaseProjectId();
+export function getFirebaseStorageBucket(): string {
   return (
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
     process.env.FIREBASE_STORAGE_BUCKET ||
-    (projectId ? `${projectId}.appspot.com` : null)
+    DEFAULT_FIREBASE_CONFIG.storageBucket
   );
 }
 
 export function isFirebaseConfigured(): boolean {
-  if (
-    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
-    (process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY)
-  ) {
-    return true;
-  }
-
-  const projectId = getFirebaseProjectId();
-  const apiKey =
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-
-  return Boolean(projectId && apiKey);
+  return true;
 }
 
 function getWebFirebaseApp(): FirebaseApp | null {
   try {
-    const projectId = getFirebaseProjectId();
-    const apiKey =
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-
-    if (!projectId || !apiKey) return null;
-
     if (getWebApps().length > 0) {
       return getWebApp();
     }
+
+    const projectId = getFirebaseProjectId();
+    const apiKey =
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+      process.env.FIREBASE_API_KEY ||
+      DEFAULT_FIREBASE_CONFIG.apiKey;
 
     const firebaseConfig = {
       apiKey,
       authDomain:
         process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
         process.env.FIREBASE_AUTH_DOMAIN ||
-        `${projectId}.firebaseapp.com`,
+        DEFAULT_FIREBASE_CONFIG.authDomain,
       projectId,
-      storageBucket: getFirebaseStorageBucket() || `${projectId}.appspot.com`,
+      storageBucket: getFirebaseStorageBucket(),
       messagingSenderId:
         process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
-        process.env.FIREBASE_MESSAGING_SENDER_ID,
+        process.env.FIREBASE_MESSAGING_SENDER_ID ||
+        DEFAULT_FIREBASE_CONFIG.messagingSenderId,
       appId:
-        process.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID,
+        process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
+        process.env.FIREBASE_APP_ID ||
+        DEFAULT_FIREBASE_CONFIG.appId,
     };
 
     return initWebApp(firebaseConfig);
@@ -168,8 +167,7 @@ function getAdminFirestoreInstance(): AdminFirestore | null {
   try {
     const existing = getAdminApps();
     if (existing.length > 0) {
-      const db = getAdminFirestore();
-      return db;
+      return getAdminFirestore();
     }
 
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
@@ -242,20 +240,15 @@ function getWebFirestoreInstance(): WebFirestore | null {
 }
 
 /**
- * Fetch the store menu from Firebase Firestore with fast timeout
+ * Fetch the store menu from Firebase Firestore
  */
 export async function getStoreFromFirebase(): Promise<Store | null> {
-  if (!isFirebaseConfigured()) {
-    lastConnectionState = "not_configured";
-    return null;
-  }
-
   // 1. Try Firebase Admin SDK first
   const adminDb = getAdminFirestoreInstance();
   if (adminDb) {
     const adminResult = await withTimeout(
       adminDb.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get(),
-      2500,
+      8000,
       recordFirebaseError,
     );
     if (adminResult && adminResult.exists) {
@@ -271,15 +264,13 @@ export async function getStoreFromFirebase(): Promise<Store | null> {
   const webDb = getWebFirestoreInstance();
   if (webDb) {
     const docRef = doc(webDb, COLLECTION_NAME, DOCUMENT_ID);
-    const docSnap = await withTimeout(getDoc(docRef), 2200, recordFirebaseError);
+    const docSnap = await withTimeout(getDoc(docRef), 8000, recordFirebaseError);
     if (docSnap && docSnap.exists()) {
       const data = docSnap.data();
       if (data) {
         lastConnectionState = "connected";
         return parseStore(data);
       }
-    } else if (docSnap && !docSnap.exists()) {
-      lastConnectionState = "connected";
     }
   }
 
@@ -287,14 +278,9 @@ export async function getStoreFromFirebase(): Promise<Store | null> {
 }
 
 /**
- * Save or update the store menu in Firebase Firestore with fast timeout
+ * Save or update the store menu in Firebase Firestore
  */
 export async function saveStoreToFirebase(store: Store): Promise<boolean> {
-  if (!isFirebaseConfigured()) {
-    lastConnectionState = "not_configured";
-    return false;
-  }
-
   const now = new Date().toISOString();
   const cleanStore = parseStore(store);
   const payload = cleanForFirestore({
@@ -310,9 +296,9 @@ export async function saveStoreToFirebase(store: Store): Promise<boolean> {
       adminDb
         .collection(COLLECTION_NAME)
         .doc(DOCUMENT_ID)
-        .set(payload, { merge: true })
+        .set(payload)
         .then(() => true),
-      2500,
+      8000,
       recordFirebaseError,
     );
     if (adminSaved) {
@@ -321,13 +307,13 @@ export async function saveStoreToFirebase(store: Store): Promise<boolean> {
     }
   }
 
-  // 2. Try Firebase Web SDK
+  // 2. Try Firebase Web SDK (overwrite full document so deleted dishes/fields are cleanly removed)
   const webDb = getWebFirestoreInstance();
   if (webDb) {
     const docRef = doc(webDb, COLLECTION_NAME, DOCUMENT_ID);
     const webSaved = await withTimeout(
-      setDoc(docRef, payload, { merge: true }).then(() => true),
-      2200,
+      setDoc(docRef, payload).then(() => true),
+      8000,
       recordFirebaseError,
     );
     if (webSaved) {
@@ -347,8 +333,6 @@ export async function uploadImageToFirebase(
   buffer: Buffer,
   mimeType: string,
 ): Promise<{ url: string; provider: "firebase-storage" | "firestore-media" } | null> {
-  if (!isFirebaseConfigured()) return null;
-
   // 1. Try Firebase Storage (if bucket is enabled)
   const app = getWebFirebaseApp();
   if (app) {
@@ -360,7 +344,7 @@ export async function uploadImageToFirebase(
           contentType: mimeType,
           cacheControl: "public, max-age=31536000, immutable",
         }).then(() => getDownloadURL(fileRef)),
-        2500,
+        4000,
       );
       if (uploadedUrl) {
         return { url: uploadedUrl, provider: "firebase-storage" };
@@ -391,7 +375,7 @@ export async function uploadImageToFirebase(
           .doc(filename)
           .set(asset)
           .then(() => true),
-        2500,
+        8000,
         recordFirebaseError,
       );
       if (ok) {
@@ -404,7 +388,7 @@ export async function uploadImageToFirebase(
     if (webDb) {
       const ok = await withTimeout(
         setDoc(doc(webDb, MEDIA_COLLECTION, filename), asset).then(() => true),
-        2200,
+        8000,
         recordFirebaseError,
       );
       if (ok) {
@@ -423,13 +407,11 @@ export async function uploadImageToFirebase(
 export async function getImageFromFirebase(
   filename: string,
 ): Promise<{ buffer: Buffer; mimeType: string } | null> {
-  if (!isFirebaseConfigured()) return null;
-
   const adminDb = getAdminFirestoreInstance();
   if (adminDb) {
     const snap = await withTimeout(
       adminDb.collection(MEDIA_COLLECTION).doc(filename).get(),
-      2500,
+      8000,
     );
     if (snap && snap.exists) {
       const data = snap.data() as MediaAsset | undefined;
@@ -446,7 +428,7 @@ export async function getImageFromFirebase(
   if (webDb) {
     const snap = await withTimeout(
       getDoc(doc(webDb, MEDIA_COLLECTION, filename)),
-      2200,
+      8000,
     );
     if (snap && snap.exists()) {
       const data = snap.data() as MediaAsset | undefined;
@@ -466,12 +448,10 @@ export async function getImageFromFirebase(
  * List uploaded image paths from Firestore `media` collection
  */
 export async function listImagesFromFirebase(): Promise<string[]> {
-  if (!isFirebaseConfigured()) return [];
-
   const webDb = getWebFirestoreInstance();
   if (!webDb) return [];
 
-  const snap = await withTimeout(getDocs(collection(webDb, MEDIA_COLLECTION)), 2000);
+  const snap = await withTimeout(getDocs(collection(webDb, MEDIA_COLLECTION)), 5000);
   if (!snap) return [];
 
   const paths: string[] = [];
@@ -485,20 +465,8 @@ export async function listImagesFromFirebase(): Promise<string[]> {
  * Return current diagnostic status of Firebase connection
  */
 export function getFirebaseStatus(): FirebaseStatusInfo {
-  const configured = isFirebaseConfigured();
   const projectId = getFirebaseProjectId();
   const storageBucket = getFirebaseStorageBucket();
-
-  if (!configured || !projectId) {
-    return {
-      configured: false,
-      state: "not_configured",
-      projectId: null,
-      storageBucket: null,
-      message: "Firebase no está configurado en variables de entorno. Guardando en base local.",
-    };
-  }
-
   const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore`;
 
   if (lastConnectionState === "connected") {
@@ -518,7 +486,7 @@ export function getFirebaseStatus(): FirebaseStatusInfo {
       state: "api_disabled",
       projectId,
       storageBucket,
-      message: `Los cambios se guardan en la base local del servidor. Para sincronizar en la nube de Firebase (${projectId}), hacé clic en "Crear base de datos" en tu consola de Firestore.`,
+      message: `Para sincronizar en la nube de Firebase (${projectId}), hacé clic en "Crear base de datos" en tu consola de Firestore.`,
       consoleUrl,
     };
   }
@@ -529,14 +497,14 @@ export function getFirebaseStatus(): FirebaseStatusInfo {
       state: "permission_denied",
       projectId,
       storageBucket,
-      message: `Los cambios se guardan en la base local. En Firebase (${projectId}) habilitá permisos de lectura/escritura en Firestore > Reglas.`,
+      message: `En Firebase (${projectId}) habilitá permisos de lectura/escritura en Firestore > Reglas.`,
       consoleUrl,
     };
   }
 
   return {
     configured: true,
-    state: lastConnectionState === "not_configured" ? "connected" : lastConnectionState,
+    state: lastConnectionState,
     projectId,
     storageBucket,
     message:

@@ -2,17 +2,37 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import os from "os";
 import type { Order, OrderStatus } from "./types";
-import { isFirebaseConfigured } from "./store";
+import { isFirebaseConfigured, getFirebaseProjectId, getFirebaseStorageBucket } from "./firebase";
 
 const ORDERS_COLLECTION = "orders";
 const defaultOrdersFile = path.join(process.cwd(), "data", "orders.json");
 const tmpDir = path.join(os.tmpdir(), "abriyservi-data");
 const tmpOrdersFile = path.join(tmpDir, "orders.json");
 
+const DEFAULT_API_KEY = "AIzaSyBObuvyLsyMh5Ly-Uf0svX0EwFCDRH9qoU";
+const DEFAULT_APP_ID = "1:570318467650:web:82b6d8d698bf4734a4b3db";
+
+function getFirebaseConfig() {
+  const projectId = getFirebaseProjectId();
+  const apiKey =
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+    process.env.FIREBASE_API_KEY ||
+    DEFAULT_API_KEY;
+
+  return {
+    apiKey,
+    authDomain:
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
+    projectId,
+    storageBucket: getFirebaseStorageBucket(),
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || DEFAULT_APP_ID,
+  };
+}
+
 /**
- * Timeout helper to avoid hanging on uninitialized or blocked Firestore streams
+ * Timeout helper for serverless Firestore operations
  */
-function withTimeout<T>(promise: Promise<T>, ms = 1500): Promise<T | null> {
+function withTimeout<T>(promise: Promise<T>, ms = 6000): Promise<T | null> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), ms);
     promise
@@ -29,10 +49,9 @@ function withTimeout<T>(promise: Promise<T>, ms = 1500): Promise<T | null> {
 }
 
 /**
- * Read all orders from local storage, with background/fallback Firestore sync
+ * Read all orders from Firestore (primary) + local fallback
  */
 export async function getOrders(): Promise<Order[]> {
-  // 1. Read local storage first (instant response)
   let localOrders: Order[] = [];
   try {
     let raw: string;
@@ -47,7 +66,6 @@ export async function getOrders(): Promise<Order[]> {
     localOrders = [];
   }
 
-  // 2. If Firebase is configured, attempt to sync from Firestore with strict timeout
   if (isFirebaseConfigured()) {
     try {
       const firestoreAction = async (): Promise<Order[]> => {
@@ -56,19 +74,7 @@ export async function getOrders(): Promise<Order[]> {
           "firebase/firestore"
         );
 
-        const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-
-        if (!apiKey || !projectId) return [];
-
-        const config = {
-          apiKey,
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
-          projectId,
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`,
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-        };
-
+        const config = getFirebaseConfig();
         const app = getApps().length > 0 ? getApp() : initializeApp(config);
         const db = getFirestore(app);
 
@@ -76,34 +82,26 @@ export async function getOrders(): Promise<Order[]> {
         const snap = await getDocs(q);
 
         const firestoreOrders: Order[] = [];
-        snap.forEach((doc) => {
-          firestoreOrders.push({ ...(doc.data() as Order), id: doc.id });
+        snap.forEach((docSnap) => {
+          firestoreOrders.push({ ...(docSnap.data() as Order), id: docSnap.id });
         });
         return firestoreOrders;
       };
 
-      const remoteOrders = await withTimeout(firestoreAction(), 1500);
+      const remoteOrders = await withTimeout(firestoreAction(), 6000);
 
-      if (remoteOrders && remoteOrders.length > 0) {
-        // Merge with local orders
-        const map = new Map<string, Order>();
-        remoteOrders.forEach((o) => map.set(o.id, o));
-        localOrders.forEach((o) => {
-          if (!map.has(o.id)) map.set(o.id, o);
-        });
-
-        const merged = Array.from(map.values()).sort(
+      if (remoteOrders) {
+        const sorted = remoteOrders.sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
-        // Update local cache
         try {
           await mkdir(tmpDir, { recursive: true });
-          await writeFile(tmpOrdersFile, JSON.stringify(merged, null, 2));
+          await writeFile(tmpOrdersFile, JSON.stringify(sorted, null, 2));
         } catch {
           // Ignore
         }
-        return merged;
+        return sorted;
       }
     } catch (err) {
       console.warn("Firestore orders read failed:", err);
@@ -122,7 +120,6 @@ export async function createOrder(
   data: Omit<Order, "id" | "status" | "created_at" | "updated_at">
 ): Promise<Order> {
   const now = new Date().toISOString();
-  // Short readable ID: ORD-XXXX
   const shortNum = Math.floor(1000 + Math.random() * 9000);
   const id = `ORD-${shortNum}`;
 
@@ -134,48 +131,37 @@ export async function createOrder(
     updated_at: now,
   };
 
-  // 1. Immediately save to local storage (instant response guaranteed)
-  const currentOrders = await getOrders();
-  const updatedOrders = [order, ...currentOrders.filter((o) => o.id !== id)];
-
-  try {
-    await mkdir(tmpDir, { recursive: true });
-    await writeFile(tmpOrdersFile, JSON.stringify(updatedOrders, null, 2));
-    try {
-      await writeFile(defaultOrdersFile, JSON.stringify(updatedOrders, null, 2));
-    } catch {
-      // Ignore
-    }
-  } catch (err) {
-    console.error("Error writing order to local storage:", err);
-  }
-
-  // 2. Background Firestore write with timeout
   if (isFirebaseConfigured()) {
     const firestoreWrite = async () => {
       const { initializeApp, getApps, getApp } = await import("firebase/app");
       const { getFirestore, doc, setDoc } = await import("firebase/firestore");
 
-      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-
-      if (!apiKey || !projectId) return;
-
-      const config = {
-        apiKey,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
-        projectId,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      };
-
+      const config = getFirebaseConfig();
       const app = getApps().length > 0 ? getApp() : initializeApp(config);
       const db = getFirestore(app);
 
-      await setDoc(doc(db, ORDERS_COLLECTION, id), order, { merge: true });
+      await setDoc(
+        doc(db, ORDERS_COLLECTION, id),
+        JSON.parse(JSON.stringify(order)),
+        { merge: true },
+      );
     };
 
-    withTimeout(firestoreWrite(), 1500).catch(() => {});
+    await withTimeout(firestoreWrite(), 6000);
+  }
+
+  try {
+    const currentOrders = await getOrders();
+    const updatedOrders = [order, ...currentOrders.filter((o) => o.id !== id)];
+    await mkdir(tmpDir, { recursive: true });
+    await writeFile(tmpOrdersFile, JSON.stringify(updatedOrders, null, 2));
+    try {
+      await writeFile(defaultOrdersFile, JSON.stringify(updatedOrders, null, 2));
+    } catch {
+      // Ignore in serverless
+    }
+  } catch (err) {
+    console.error("Error writing order to local storage:", err);
   }
 
   return order;
@@ -201,7 +187,28 @@ export async function updateOrderStatus(
 
   currentOrders[index] = updatedOrder;
 
-  // 1. Immediately update local storage
+  if (isFirebaseConfigured()) {
+    const firestoreUpdate = async () => {
+      const { initializeApp, getApps, getApp } = await import("firebase/app");
+      const { getFirestore, doc, setDoc } = await import("firebase/firestore");
+
+      const config = getFirebaseConfig();
+      const app = getApps().length > 0 ? getApp() : initializeApp(config);
+      const db = getFirestore(app);
+
+      await setDoc(
+        doc(db, ORDERS_COLLECTION, orderId),
+        {
+          status: newStatus,
+          updated_at: now,
+        },
+        { merge: true },
+      );
+    };
+
+    await withTimeout(firestoreUpdate(), 6000);
+  }
+
   try {
     await mkdir(tmpDir, { recursive: true });
     await writeFile(tmpOrdersFile, JSON.stringify(currentOrders, null, 2));
@@ -214,37 +221,6 @@ export async function updateOrderStatus(
     console.error("Error updating local order:", err);
   }
 
-  // 2. Background Firestore update
-  if (isFirebaseConfigured()) {
-    const firestoreUpdate = async () => {
-      const { initializeApp, getApps, getApp } = await import("firebase/app");
-      const { getFirestore, doc, updateDoc } = await import("firebase/firestore");
-
-      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-
-      if (!apiKey || !projectId) return;
-
-      const config = {
-        apiKey,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
-        projectId,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      };
-
-      const app = getApps().length > 0 ? getApp() : initializeApp(config);
-      const db = getFirestore(app);
-
-      await updateDoc(doc(db, ORDERS_COLLECTION, orderId), {
-        status: newStatus,
-        updated_at: now,
-      });
-    };
-
-    withTimeout(firestoreUpdate(), 1500).catch(() => {});
-  }
-
   return updatedOrder;
 }
 
@@ -252,6 +228,21 @@ export async function updateOrderStatus(
  * Delete an order
  */
 export async function deleteOrder(orderId: string): Promise<boolean> {
+  if (isFirebaseConfigured()) {
+    const firestoreDelete = async () => {
+      const { initializeApp, getApps, getApp } = await import("firebase/app");
+      const { getFirestore, doc, deleteDoc } = await import("firebase/firestore");
+
+      const config = getFirebaseConfig();
+      const app = getApps().length > 0 ? getApp() : initializeApp(config);
+      const db = getFirestore(app);
+
+      await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
+    };
+
+    await withTimeout(firestoreDelete(), 6000);
+  }
+
   const currentOrders = await getOrders();
   const filtered = currentOrders.filter((o) => o.id !== orderId);
 
@@ -265,33 +256,6 @@ export async function deleteOrder(orderId: string): Promise<boolean> {
     }
   } catch (err) {
     console.error("Error deleting local order:", err);
-  }
-
-  if (isFirebaseConfigured()) {
-    const firestoreDelete = async () => {
-      const { initializeApp, getApps, getApp } = await import("firebase/app");
-      const { getFirestore, doc, deleteDoc } = await import("firebase/firestore");
-
-      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
-      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-
-      if (!apiKey || !projectId) return;
-
-      const config = {
-        apiKey,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`,
-        projectId,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      };
-
-      const app = getApps().length > 0 ? getApp() : initializeApp(config);
-      const db = getFirestore(app);
-
-      await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
-    };
-
-    withTimeout(firestoreDelete(), 1500).catch(() => {});
   }
 
   return true;
