@@ -6,12 +6,14 @@ import { ShoppingBag, MessageCircle } from "lucide-react";
 
 interface HeaderNavProps {
   cartCount: number;
+  hasActiveOrder?: boolean;
   onOpenCart: () => void;
   whatsappNumber: string;
 }
 
 export function HeaderNav({
   cartCount,
+  hasActiveOrder = false,
   onOpenCart,
   whatsappNumber,
 }: HeaderNavProps) {
@@ -105,13 +107,16 @@ export function HeaderNav({
           <button
             onClick={onOpenCart}
             type="button"
-            className="relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading text-xs font-bold tracking-wider uppercase shadow-md hover:bg-[#7D8B3F] active:scale-95 transition-all cursor-pointer"
+            className="relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#68A01E] text-[#FFFDF2] font-heading text-xs font-bold tracking-wider uppercase shadow-md hover:bg-[#598B17] active:scale-95 transition-all cursor-pointer"
             aria-label="Ver pedido"
           >
             <ShoppingBag size={16} />
-            <span className="hidden xs:inline">Mi Pedido</span>
+            <span className="hidden xs:inline">{hasActiveOrder && cartCount === 0 ? "Tu Pedido" : "Mi Pedido"}</span>
+            {hasActiveOrder && cartCount === 0 && (
+              <span className="size-2 rounded-full bg-white animate-ping" />
+            )}
             {cartCount > 0 && (
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#FFFDF2] text-[#8F9E4B] text-[11px] font-black shadow-inner">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#FFFDF2] text-[#68A01E] text-[11px] font-black shadow-inner">
                 {cartCount}
               </span>
             )}

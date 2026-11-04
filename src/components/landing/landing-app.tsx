@@ -7,31 +7,43 @@ import { MethodSection } from "./method-section";
 import { FullMenuSection } from "./full-menu-section";
 import { PackagingFeatureSection } from "./packaging-feature-section";
 import { CartDrawer } from "./cart-drawer";
+import { FloatingCartBar } from "./floating-cart-bar";
 import { Footer } from "./footer";
 import { SmoothScroll } from "./smooth-scroll";
-import type { CartLine, Dish, Store } from "@/lib/types";
+import type { CartLine, Dish, Store, Order } from "@/lib/types";
 
 interface LandingAppProps {
   store: Store;
 }
 
 const CART_STORAGE_KEY = "abriyservi_cart_v1";
+const ACTIVE_ORDER_KEY = "abriyservi_active_order";
 
 export function LandingApp({ store }: LandingAppProps) {
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Restore cart on client mount
+  // Restore cart and active order on client mount
   useEffect(() => {
     setIsMounted(true);
     try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) {
-        setCart(JSON.parse(saved));
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
       }
     } catch {
-      // Ignore local storage error
+      // Ignore
+    }
+
+    try {
+      const savedOrder = localStorage.getItem(ACTIVE_ORDER_KEY);
+      if (savedOrder) {
+        setActiveOrder(JSON.parse(savedOrder));
+      }
+    } catch {
+      // Ignore
     }
   }, []);
 
@@ -93,6 +105,7 @@ export function LandingApp({ store }: LandingAppProps) {
       {/* Floating Header */}
       <HeaderNav
         cartCount={totalCartCount}
+        hasActiveOrder={Boolean(activeOrder)}
         onOpenCart={() => setIsCartOpen(true)}
         whatsappNumber={store.whatsapp}
       />
@@ -122,6 +135,16 @@ export function LandingApp({ store }: LandingAppProps) {
         onUpdateQty={handleUpdateQty}
         onClearCart={handleClearCart}
         store={store}
+        activeOrder={activeOrder}
+        onSetActiveOrder={setActiveOrder}
+      />
+
+      {/* Fixed Mobile-first Purchase Footer Bar / Live Order Status Pill */}
+      <FloatingCartBar
+        cart={cart}
+        activeOrder={activeOrder}
+        onOpenCart={() => setIsCartOpen(true)}
+        isOpen={isCartOpen}
       />
     </div>
   );

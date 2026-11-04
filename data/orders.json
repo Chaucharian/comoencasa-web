@@ -1,0 +1,157 @@
+[
+  {
+    "customerName": "sddqwd",
+    "customerPhone": "+542235854477",
+    "customerAddress": "sasas",
+    "fulfillment": "delivery",
+    "payment": "efectivo",
+    "note": "dasda",
+    "items": [
+      {
+        "dishId": "carne-horno",
+        "name": "Carne al horno con salvia y puré de batata",
+        "price": 13200,
+        "qty": 1
+      },
+      {
+        "dishId": "bondiola-braseada",
+        "name": "Bondiola braseada con batatas",
+        "price": 13800,
+        "qty": 1
+      }
+    ],
+    "subtotal": 27000,
+    "deliveryFee": 2000,
+    "total": 29000,
+    "id": "ORD-5320",
+    "status": "aceptado",
+    "created_at": "2026-11-04T00:14:56.604Z",
+    "updated_at": "2026-11-04T00:16:02.610Z"
+  },
+  {
+    "created_at": "2026-11-03T23:57:33.487Z",
+    "customerAddress": "eee",
+    "customerName": "eeee",
+    "customerPhone": "222222222",
+    "deliveryFee": 2000,
+    "fulfillment": "delivery",
+    "id": "ORD-5169",
+    "items": [
+      {
+        "dishId": "carne-horno",
+        "name": "Carne al horno con salvia y puré de batata",
+        "price": 13200,
+        "qty": 1
+      },
+      {
+        "dishId": "bondiola-braseada",
+        "name": "Bondiola braseada con batatas",
+        "price": 13800,
+        "qty": 1
+      }
+    ],
+    "payment": "efectivo",
+    "status": "completado",
+    "subtotal": 27000,
+    "total": 29000,
+    "updated_at": "2026-11-03T23:58:00.027Z"
+  },
+  {
+    "created_at": "2026-11-03T23:56:20.703Z",
+    "customerAddress": "ee",
+    "customerName": "pepe",
+    "customerPhone": "32321321",
+    "deliveryFee": 2000,
+    "fulfillment": "delivery",
+    "id": "ORD-1308",
+    "items": [
+      {
+        "dishId": "pollo-crema",
+        "name": "Pollo a la crema de champiñones",
+        "price": 12500,
+        "qty": 1
+      },
+      {
+        "dishId": "carne-horno",
+        "name": "Carne al horno con salvia y batata",
+        "price": 13200,
+        "qty": 1
+      },
+      {
+        "dishId": "osobuco-malbec",
+        "name": "Osobuco al Malbec con polenta cremosa",
+        "price": 14500,
+        "qty": 1
+      },
+      {
+        "dishId": "pechuga-fitness-romero",
+        "name": "Pechuga grillada con boniato y brócoli",
+        "price": 11900,
+        "qty": 2
+      },
+      {
+        "dishId": "lomo-fitness-calabaza",
+        "name": "Lomo magro braseado con calabaza asada",
+        "price": 14800,
+        "qty": 8
+      }
+    ],
+    "payment": "efectivo",
+    "status": "nuevo",
+    "subtotal": 182400,
+    "total": 184400,
+    "updated_at": "2026-11-03T23:56:20.703Z"
+  },
+  {
+    "created_at": "2026-11-03T21:23:10.091Z",
+    "customerAddress": "Strobel 5045",
+    "customerName": "Agustin Salinas",
+    "customerPhone": "5492234384979",
+    "deliveryFee": 2000,
+    "fulfillment": "delivery",
+    "id": "ORD-1460",
+    "items": [
+      {
+        "dishId": "bondiola-braseada",
+        "name": "Bondiola braseada con puré de batata",
+        "price": 11900,
+        "qty": 2
+      }
+    ],
+    "note": "Enviar cubiertos descartables",
+    "payment": "efectivo",
+    "status": "nuevo",
+    "subtotal": 23800,
+    "total": 25800,
+    "updated_at": "2026-11-03T21:23:10.091Z"
+  },
+  {
+    "created_at": "2026-11-03T21:21:58.324Z",
+    "customerAddress": "Av. Colón 1234, 4°B",
+    "customerName": "Prueba Agustin",
+    "customerPhone": "5492231234567",
+    "deliveryFee": 2000,
+    "fulfillment": "delivery",
+    "id": "ORD-8777",
+    "items": [
+      {
+        "dishId": "bondiola-braseada",
+        "name": "Bondiola braseada con puré de batata",
+        "price": 11900,
+        "qty": 2
+      },
+      {
+        "dishId": "canelones-espinaca",
+        "name": "Canelones de espinaca y ricota",
+        "price": 10500,
+        "qty": 1
+      }
+    ],
+    "note": "Timbre roto, tocar bocina",
+    "payment": "transferencia",
+    "status": "nuevo",
+    "subtotal": 34300,
+    "total": 36300,
+    "updated_at": "2026-11-03T21:21:58.324Z"
+  }
+]

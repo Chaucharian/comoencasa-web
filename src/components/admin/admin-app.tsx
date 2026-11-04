@@ -4,13 +4,44 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/cn";
 import { COVER_IMAGES, FOOD_IMAGES, formatArs } from "@/lib/menu";
-import type { Category, Dish, Store } from "@/lib/types";
+import { getStoreScheduleStatus } from "@/lib/schedule";
+import type { Category, Dish, Store, Order, OrderStatus } from "@/lib/types";
+import {
+  ClipboardList,
+  UtensilsCrossed,
+  Layers,
+  Store as StoreIcon,
+  Cloud,
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  X,
+  Search,
+  ExternalLink,
+  Flame,
+  Scale,
+  Clock,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  Truck,
+  RotateCcw,
+  MessageCircle,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Ban,
+  PackageCheck,
+} from "lucide-react";
 
 const fieldClass =
-  "h-12 w-full rounded-2xl border border-border bg-card px-4 text-base outline-none placeholder:text-muted-foreground/70 focus:ring-2 focus:ring-primary/30";
+  "h-11 w-full rounded-xl border border-[#DFD8C4] bg-white px-3.5 text-sm text-[#222421] outline-none placeholder:text-[#5E4B3C]/50 focus:border-[#8F9E4B] focus:ring-1 focus:ring-[#8F9E4B] transition-all";
 
 function slugify(value: string) {
   const slug = value
@@ -33,14 +64,16 @@ function uniqueId(base: string, ids: string[]) {
 export function AdminApp({
   authed,
   store,
+  initialOrders = [],
   isFirebase = false,
 }: {
   authed: boolean;
   store: Store | null;
+  initialOrders?: Order[];
   isFirebase?: boolean;
 }) {
   if (!authed || !store) return <Login />;
-  return <Editor initial={store} isFirebase={isFirebase} />;
+  return <Editor initial={store} initialOrders={initialOrders} isFirebase={isFirebase} />;
 }
 
 function Login() {
@@ -49,60 +82,86 @@ function Login() {
   const [pending, setPending] = useState(false);
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center bg-background px-5">
-      <p className="text-sm font-script text-[#8F9E4B] text-xl">abrí y serví</p>
-      <h1 className="mt-1 font-heading font-black text-4xl text-[#222421] uppercase">Administración</h1>
-      <p className="mt-2 text-muted-foreground">Acá se edita la carta, el horario y el WhatsApp que recibe los pedidos.</p>
-      <form
-        className="mt-6 space-y-3"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setPending(true);
-          setError(null);
-          const password = String(new FormData(event.currentTarget).get("password") ?? "");
-          const response = await fetch("/api/admin/login", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ password }),
-          });
-          setPending(false);
-          if (!response.ok) {
-            setError("Clave incorrecta.");
-            return;
-          }
-          router.refresh();
-        }}
-      >
-        <label className="block text-sm font-medium">
-          Clave
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className={`${fieldClass} mt-1.5`}
-          />
-        </label>
-        {error && <p className="text-sm text-primary">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60"
+    <main className="mx-auto flex min-h-svh max-w-md flex-col justify-center bg-[#FFFDF2] px-6 text-[#222421]">
+      <div className="rounded-3xl border border-[#DFD8C4] bg-white p-7 shadow-xl">
+        <p className="font-script text-2xl text-[#8F9E4B]">abrí y serví</p>
+        <h1 className="mt-1 font-heading text-3xl font-black uppercase tracking-tight text-[#222421]">
+          Panel de Control
+        </h1>
+        <p className="mt-2 text-sm text-[#5E4B3C]/80">
+          Ingresá tu clave de administración para gestionar pedidos, viandas y envíos.
+        </p>
+
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setPending(true);
+            setError(null);
+            const password = String(new FormData(event.currentTarget).get("password") ?? "");
+            const response = await fetch("/api/admin/login", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ password }),
+            });
+            setPending(false);
+            if (!response.ok) {
+              setError("Clave incorrecta.");
+              return;
+            }
+            router.refresh();
+          }}
         >
-          {pending ? "Entrando…" : "Entrar"}
-        </button>
-      </form>
-      <Link href="/" className="mt-6 text-sm text-muted-foreground">
-        Volver a la carta
-      </Link>
+          <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+            Clave de Acceso
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              required
+              className={`${fieldClass} mt-1.5`}
+            />
+          </label>
+          {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+          <button
+            type="submit"
+            disabled={pending}
+            className="h-11 w-full rounded-xl bg-[#8F9E4B] text-xs font-heading font-black uppercase tracking-wider text-[#FFFDF2] shadow-md hover:bg-[#7D8B3F] active:scale-98 transition-all disabled:opacity-60 cursor-pointer"
+          >
+            {pending ? "Verificando…" : "Ingresar"}
+          </button>
+        </form>
+
+        <Link
+          href="/"
+          className="mt-6 inline-flex items-center gap-1.5 text-xs font-heading font-bold uppercase tracking-wider text-[#8F9E4B] hover:underline"
+        >
+          <span>← Volver a la web</span>
+        </Link>
+      </div>
     </main>
   );
 }
 
-function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: boolean }) {
+type AdminTab = "orders" | "dishes" | "categories" | "store" | "database";
+
+function Editor({
+  initial,
+  initialOrders = [],
+  isFirebase = false,
+}: {
+  initial: Store;
+  initialOrders?: Order[];
+  isFirebase?: boolean;
+}) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<AdminTab>("orders");
   const [draft, setDraft] = useState(initial);
   const [saved, setSaved] = useState(initial);
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orderFilter, setOrderFilter] = useState<"todos" | OrderStatus>("todos");
+  const [orderSearch, setOrderSearch] = useState("");
   const [editing, setEditing] = useState<Dish | null>(null);
   const [creating, setCreating] = useState(false);
   const [categoryName, setCategoryName] = useState("");
@@ -110,9 +169,71 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [selectedCatFilter, setSelectedCatFilter] = useState<string>("all");
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   const categories = draft.categories.slice().sort((a, b) => a.sort - b.sort);
+
+  // Poll orders periodically
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshOrders(false);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  async function refreshOrders(showSpinner = true) {
+    if (showSpinner) setIsRefreshingOrders(true);
+    try {
+      const res = await fetch("/api/admin/orders");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.orders) setOrders(data.orders);
+      }
+    } catch (err) {
+      console.warn("Error refreshing orders:", err);
+    } finally {
+      if (showSpinner) setIsRefreshingOrders(false);
+    }
+  }
+
+  async function handleUpdateOrderStatus(orderId: string, newStatus: OrderStatus) {
+    // Optimistic UI update
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, status: newStatus, updated_at: new Date().toISOString() }
+          : o
+      )
+    );
+
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: orderId, status: newStatus }),
+      });
+      if (!res.ok) {
+        refreshOrders(false);
+      }
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      refreshOrders(false);
+    }
+  }
+
+  async function handleDeleteOrder(orderId: string) {
+    if (!window.confirm("¿Seguro que deseás eliminar este pedido del historial?")) return;
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    try {
+      await fetch(`/api/admin/orders?id=${orderId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Error deleting order:", err);
+      refreshOrders(false);
+    }
+  }
 
   function patch(partial: Partial<Store>) {
     setDraft((current) => ({ ...current, ...partial }));
@@ -150,8 +271,8 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
   function removeCategory(category: Category) {
     const count = draft.dishes.filter((dish) => dish.categoryId === category.id).length;
     const message = count
-      ? `Se borra “${category.name}” y sus ${count} platos.`
-      : `Se borra “${category.name}”.`;
+      ? `¿Eliminar la categoría "${category.name}" y sus ${count} platos?`
+      : `¿Eliminar la categoría "${category.name}"?`;
     if (!window.confirm(message)) return;
     setDraft((current) => ({
       ...current,
@@ -169,7 +290,7 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
       categories: [
         ...current.categories,
         {
-          id: uniqueId(slugify(name), current.categories.map((category) => category.id)),
+          id: uniqueId(slugify(name), current.categories.map((c) => c.id)),
           name,
           sort: current.categories.length,
         },
@@ -177,10 +298,6 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
     }));
     setCategoryName("");
     setStatus(null);
-  }
-
-  function dishesIn(categoryId: string) {
-    return draft.dishes.filter((dish) => dish.categoryId === categoryId).sort((a, b) => a.sort - b.sort);
   }
 
   function updateDish(id: string, partial: Partial<Dish>) {
@@ -214,7 +331,7 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
   }
 
   function removeDish(dish: Dish) {
-    if (!window.confirm(`Se borra “${dish.name}”.`)) return;
+    if (!window.confirm(`¿Eliminar "${dish.name}" de la carta?`)) return;
     setDraft((current) => ({
       ...current,
       dishes: current.dishes.filter((item) => item.id !== dish.id),
@@ -222,18 +339,25 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
     setStatus(null);
   }
 
-  function openNew(categoryId: string) {
-    const siblings = dishesIn(categoryId);
+  function openNewDish(categoryId?: string) {
+    const targetCat = categoryId || categories[0]?.id || "viandas";
+    const siblings = draft.dishes.filter((d) => d.categoryId === targetCat);
     setCreating(true);
     setEditing({
       id: crypto.randomUUID(),
-      categoryId,
+      categoryId: targetCat,
       name: "",
       description: "",
-      price: 0,
+      price: 11000,
       image: null,
       available: true,
       sort: siblings.length ? siblings[siblings.length - 1].sort + 1 : 0,
+      weight: "450g",
+      regenTime: "8-10 min",
+      method: "Herví sin abrir 8 a 10 min · Abrí y serví",
+      tag: "",
+      highlight: "",
+      featured: false,
     });
   }
 
@@ -283,253 +407,1172 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
     }
     setDraft(data);
     setSaved(data);
-    setStatus(isFirebase ? "Carta publicada y guardada en Firebase Firestore." : "Carta publicada.");
+    setStatus(isFirebase ? "Carta publicada y sincronizada con Firestore." : "Carta guardada localmente.");
   }
 
+  // Filtered dishes for Tab 2
+  const filteredDishes = useMemo(() => {
+    return draft.dishes.filter((dish) => {
+      const matchesCat = selectedCatFilter === "all" || dish.categoryId === selectedCatFilter;
+      const matchesSearch =
+        !searchFilter.trim() ||
+        dish.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        dish.description.toLowerCase().includes(searchFilter.toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+  }, [draft.dishes, selectedCatFilter, searchFilter]);
+
+  // Filtered orders for Tab 1
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = orderFilter === "todos" || order.status === orderFilter;
+      const matchesSearch =
+        !orderSearch.trim() ||
+        order.customerName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        order.customerPhone.includes(orderSearch) ||
+        order.id.toLowerCase().includes(orderSearch.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [orders, orderFilter, orderSearch]);
+
+  const newOrdersCount = orders.filter((o) => o.status === "nuevo").length;
+
   return (
-    <div className={cn("mx-auto min-h-svh max-w-lg bg-background", dirty ? "pb-28" : "pb-10")}>
-      <header className="flex items-start justify-between gap-3 px-5 pt-6">
-        <div>
-          <p className="text-sm font-script text-[#8F9E4B] text-xl">abrí y serví</p>
-          <h1 className="font-heading font-black text-3xl leading-none uppercase text-[#222421]">Administración</h1>
-          <div className="mt-2">
-            {isFirebase ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 text-[11px] font-medium tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Firebase Firestore conectado
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-800 text-[11px] font-medium tracking-wide"
-                title="Configurá las variables de entorno de Firebase en .env.local para persistencia en la nube"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Almacenamiento Local (Configurar Firebase en .env.local)
-              </span>
-            )}
+    <div className="min-h-screen bg-[#FFFDF2] text-[#222421]">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-30 border-b border-[#DFD8C4] bg-white/95 backdrop-blur-md px-4 sm:px-8 py-3.5 shadow-2xs">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-script text-xl text-[#8F9E4B] leading-none">abrí y serví</span>
+                <span className="rounded-md bg-[#222421] px-1.5 py-0.5 font-heading text-[10px] font-black uppercase tracking-wider text-[#FFFDF2]">
+                  Admin
+                </span>
+              </div>
+              <p className="font-heading text-xs font-bold uppercase tracking-wider text-[#5E4B3C]/70">
+                Gestión de Pedidos & Menú
+              </p>
+            </div>
+
+            {/* Cloud Status badge */}
+            <div className="hidden sm:block">
+              {isFirebase ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 border border-emerald-500/20">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Firestore Conectado
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-800 border border-amber-500/20">
+                  <span className="size-1.5 rounded-full bg-amber-500" />
+                  Modo Local (.env)
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3 pt-2 text-sm">
-          <Link href="/" className="text-muted-foreground">
-            Ver carta
-          </Link>
-          <button
-            type="button"
-            className="text-muted-foreground"
-            onClick={async () => {
-              await fetch("/api/admin/logout", { method: "POST" });
-              router.refresh();
-            }}
-          >
-            Salir
-          </button>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Quick Open/Close Toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.open}
+              onClick={() => patch({ open: !draft.open })}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-heading font-black uppercase tracking-wider transition-all cursor-pointer shadow-2xs",
+                draft.open
+                  ? "bg-[#8F9E4B] text-[#FFFDF2] hover:bg-[#7D8B3F]"
+                  : "bg-red-500 text-white hover:bg-red-600",
+              )}
+            >
+              <span className="size-2 rounded-full bg-white animate-pulse" />
+              <span>{draft.open ? "Abierto" : "Cerrado"}</span>
+            </button>
+
+            <Link
+              href="/"
+              target="_blank"
+              className="inline-flex items-center gap-1 rounded-full border border-[#DFD8C4] bg-[#FFFDF2] px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider text-[#222421] hover:bg-white transition-all shadow-2xs"
+            >
+              <span>Ver Web</span>
+              <ExternalLink size={12} />
+            </Link>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/admin/logout", { method: "POST" });
+                router.refresh();
+              }}
+              className="text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]/80 hover:text-red-600 transition-colors px-2 py-1"
+            >
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
-      <section className="px-5 pt-6">
-        <div className="flex items-center justify-between rounded-3xl bg-card px-4 py-3 ring-1 ring-border">
-          <div>
-            <p className="font-medium">{draft.open ? "Recibiendo pedidos" : "Cocina cerrada"}</p>
-            <p className="text-sm text-muted-foreground">Los clientes ven la carta igual.</p>
-          </div>
+      {/* Main Container */}
+      <main className={cn("mx-auto max-w-6xl px-4 sm:px-8 pt-6", dirty ? "pb-28" : "pb-12")}>
+        {/* Navigation Tabs Bar */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto border-b border-[#DFD8C4] pb-2 scrollbar-none">
+          {/* TAB: PEDIDOS */}
           <button
             type="button"
-            role="switch"
-            aria-checked={draft.open}
-            onClick={() => patch({ open: !draft.open })}
+            onClick={() => setActiveTab("orders")}
             className={cn(
-              "rounded-full px-3 py-2 text-sm font-semibold",
-              draft.open ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground",
+              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+              activeTab === "orders"
+                ? "bg-[#222421] text-[#FFFDF2] shadow-sm"
+                : "bg-white text-[#5E4B3C] border border-[#DFD8C4] hover:border-[#8F9E4B]",
             )}
           >
-            {draft.open ? "Abierta" : "Cerrada"}
+            <ClipboardList size={14} className={activeTab === "orders" ? "text-[#8F9E4B]" : ""} />
+            <span>Pedidos</span>
+            {newOrdersCount > 0 ? (
+              <span className="rounded-full bg-amber-500 px-2 py-0.2 text-[10px] font-black text-white animate-pulse">
+                {newOrdersCount} nuevo{newOrdersCount > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.2 text-[10px]",
+                  activeTab === "orders" ? "bg-[#8F9E4B] text-white" : "bg-[#DFD8C4]/60 text-[#222421]",
+                )}
+              >
+                {orders.length}
+              </span>
+            )}
+          </button>
+
+          {/* TAB: VIANDAS */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("dishes")}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+              activeTab === "dishes"
+                ? "bg-[#222421] text-[#FFFDF2] shadow-sm"
+                : "bg-white text-[#5E4B3C] border border-[#DFD8C4] hover:border-[#8F9E4B]",
+            )}
+          >
+            <UtensilsCrossed size={14} className={activeTab === "dishes" ? "text-[#8F9E4B]" : ""} />
+            <span>Viandas & Menú</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.2 text-[10px]",
+                activeTab === "dishes" ? "bg-[#8F9E4B] text-white" : "bg-[#DFD8C4]/60 text-[#222421]",
+              )}
+            >
+              {draft.dishes.length}
+            </span>
+          </button>
+
+          {/* TAB: CATEGORÍAS */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("categories")}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+              activeTab === "categories"
+                ? "bg-[#222421] text-[#FFFDF2] shadow-sm"
+                : "bg-white text-[#5E4B3C] border border-[#DFD8C4] hover:border-[#8F9E4B]",
+            )}
+          >
+            <Layers size={14} className={activeTab === "categories" ? "text-[#8F9E4B]" : ""} />
+            <span>Categorías</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.2 text-[10px]",
+                activeTab === "categories"
+                  ? "bg-[#8F9E4B] text-white"
+                  : "bg-[#DFD8C4]/60 text-[#222421]",
+              )}
+            >
+              {categories.length}
+            </span>
+          </button>
+
+          {/* TAB: LOCAL & DELIVERY */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("store")}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+              activeTab === "store"
+                ? "bg-[#222421] text-[#FFFDF2] shadow-sm"
+                : "bg-white text-[#5E4B3C] border border-[#DFD8C4] hover:border-[#8F9E4B]",
+            )}
+          >
+            <StoreIcon size={14} className={activeTab === "store" ? "text-[#8F9E4B]" : ""} />
+            <span>Local & Horarios</span>
+          </button>
+
+          {/* TAB: BASE DE DATOS */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("database")}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+              activeTab === "database"
+                ? "bg-[#222421] text-[#FFFDF2] shadow-sm"
+                : "bg-white text-[#5E4B3C] border border-[#DFD8C4] hover:border-[#8F9E4B]",
+            )}
+          >
+            <Cloud size={14} className={activeTab === "database" ? "text-[#8F9E4B]" : ""} />
+            <span>Base de Datos</span>
           </button>
         </div>
-      </section>
 
-      <section className="px-5 pt-8">
-        <h2 className="font-display text-3xl">La carta</h2>
-        <div className="mt-4 space-y-8">
-          {categories.map((category, index) => (
-            <div key={category.id}>
-              <div className="flex items-center gap-2">
-                <input
-                  aria-label={`Nombre de ${category.name}`}
-                  value={category.name}
-                  onChange={(event) => updateCategory(category.id, { name: event.target.value })}
-                  className="min-w-0 flex-1 bg-transparent font-display text-2xl outline-none"
-                />
-                <TextButton disabled={index === 0} onClick={() => moveCategory(category.id, -1)}>
-                  Subir
-                </TextButton>
-                <TextButton
-                  disabled={index === categories.length - 1}
-                  onClick={() => moveCategory(category.id, 1)}
+        {/* Status Messages */}
+        {!dirty && status && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs font-medium text-emerald-800">
+            <CheckCircle2 size={16} />
+            <span>{status}</span>
+          </div>
+        )}
+        {!dirty && error && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-xs font-medium text-red-800">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* TAB: ORDERS TRACKING (SIMPLE Y FUNCIONAL) */}
+        {activeTab === "orders" && (
+          <div className="mt-6 space-y-5">
+            {/* Action Bar: Filters, Search, and Refresh */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-2xl bg-white border border-[#DFD8C4] p-3.5 shadow-2xs">
+              <div className="flex flex-1 items-center gap-2">
+                <div className="relative flex-1 max-w-sm">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5E4B3C]/60" />
+                  <input
+                    type="text"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    placeholder="Buscar cliente, WhatsApp o #ID..."
+                    className="h-10 w-full rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] pl-9 pr-3 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
+                  />
+                  {orderSearch && (
+                    <button
+                      onClick={() => setOrderSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#5E4B3C]/60 hover:text-[#222421]"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Status Filter Chips */}
+                <select
+                  value={orderFilter}
+                  onChange={(e) => setOrderFilter(e.target.value as any)}
+                  className="h-10 rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] px-3 text-xs font-heading font-bold uppercase tracking-wider text-[#222421] outline-none focus:border-[#8F9E4B]"
                 >
-                  Bajar
-                </TextButton>
-                <TextButton onClick={() => removeCategory(category)}>Borrar</TextButton>
+                  <option value="todos">Todos los pedidos ({orders.length})</option>
+                  <option value="nuevo">Nuevos ({orders.filter((o) => o.status === "nuevo").length})</option>
+                  <option value="aceptado">Aceptados ({orders.filter((o) => o.status === "aceptado").length})</option>
+                  <option value="en_camino">En Camino ({orders.filter((o) => o.status === "en_camino").length})</option>
+                  <option value="completado">Completados ({orders.filter((o) => o.status === "completado").length})</option>
+                  <option value="cancelado">Cancelados ({orders.filter((o) => o.status === "cancelado").length})</option>
+                </select>
               </div>
-              <ul className="mt-2 divide-y divide-border">
-                {dishesIn(category.id).map((dish, dishIndex, siblings) => (
-                  <li key={dish.id} className={cn("flex gap-3 py-3", !dish.available && "opacity-60")}>
-                    <Thumb src={dish.image} />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{dish.name}</p>
-                      <p className="text-sm tabular-nums text-muted-foreground">{formatArs(dish.price)}</p>
-                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={dish.available}
-                          onClick={() => updateDish(dish.id, { available: !dish.available })}
-                          className={cn("font-medium", dish.available ? "text-accent" : "text-primary")}
-                        >
-                          {dish.available ? "En carta" : "Agotado"}
-                        </button>
-                        <button type="button" onClick={() => { setCreating(false); setEditing(dish); }}>
-                          Editar
-                        </button>
-                        <button type="button" disabled={dishIndex === 0} onClick={() => moveDish(dish.id, -1)} className="disabled:opacity-30">
-                          Subir
-                        </button>
-                        <button
-                          type="button"
-                          disabled={dishIndex === siblings.length - 1}
-                          onClick={() => moveDish(dish.id, 1)}
-                          className="disabled:opacity-30"
-                        >
-                          Bajar
-                        </button>
-                        <button type="button" onClick={() => removeDish(dish)}>
-                          Borrar
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <button type="button" onClick={() => openNew(category.id)} className="mt-2 text-sm font-semibold text-primary">
-                + Plato en {category.name}
+
+              <button
+                type="button"
+                onClick={() => refreshOrders(true)}
+                disabled={isRefreshingOrders}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] px-3.5 py-2 text-xs font-heading font-bold uppercase tracking-wider text-[#222421] hover:bg-white active:scale-98 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+              >
+                <RefreshCw size={13} className={isRefreshingOrders ? "animate-spin text-[#8F9E4B]" : ""} />
+                <span>Actualizar</span>
               </button>
             </div>
-          ))}
-        </div>
 
-        <form
-          className="mt-8 flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addCategory();
-          }}
-        >
-          <input
-            value={categoryName}
-            onChange={(event) => setCategoryName(event.target.value)}
-            placeholder="Nueva categoría"
-            className={fieldClass}
-          />
-          <button type="submit" className="h-12 shrink-0 rounded-full bg-foreground px-4 text-sm font-semibold text-background">
-            Agregar
-          </button>
-        </form>
-      </section>
+            {/* Orders List */}
+            {filteredOrders.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#DFD8C4] bg-white p-12 text-center">
+                <ClipboardList size={36} className="mx-auto text-[#DFD8C4]" />
+                <p className="mt-3 font-heading font-bold uppercase text-[#5E4B3C]">
+                  No hay pedidos registrados
+                </p>
+                <p className="mt-1 text-xs text-[#5E4B3C]/70">
+                  {orderFilter !== "todos"
+                    ? `No hay pedidos con estado "${orderFilter}".`
+                    : "Los pedidos que los clientes confirmen por WhatsApp se registrarán acá automáticamente."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {filteredOrders.map((order) => {
+                  const dateStr = new Date(order.created_at).toLocaleTimeString("es-AR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    day: "2-digit",
+                    month: "short",
+                  });
 
-      <section className="space-y-3 px-5 pt-10">
-        <h2 className="font-display text-3xl">El local</h2>
-        <Field label="Nombre" value={draft.name} onChange={(name) => patch({ name })} />
-        <Field label="Frase" value={draft.tagline} onChange={(tagline) => patch({ tagline })} />
-        <Field
-          label="WhatsApp"
-          value={draft.whatsapp}
-          onChange={(whatsapp) => patch({ whatsapp })}
-          hint={
-            draft.whatsapp === "5491112345678"
-              ? "Este número es de ejemplo. Cambialo por el del local, con código de país."
-              : "Los pedidos llegan a este número. Solo dígitos, con código de país."
-          }
-          warn={draft.whatsapp === "5491112345678"}
-        />
-        <Field label="Dirección" value={draft.address} onChange={(address) => patch({ address })} />
-        <Field label="Horario" value={draft.hours} onChange={(hours) => patch({ hours })} />
-        <Field label="Texto de la carta" value={draft.about} onChange={(about) => patch({ about })} multiline />
-        <Field
-          label="Cómo se paga"
-          value={draft.paymentNote}
-          onChange={(paymentNote) => patch({ paymentNote })}
-          multiline
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="Envío" value={draft.deliveryFee} onChange={(deliveryFee) => patch({ deliveryFee })} />
-          <NumberField
-            label="Mínimo delivery"
-            value={draft.deliveryMin}
-            onChange={(deliveryMin) => patch({ deliveryMin })}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Toggle
-            checked={draft.pickupEnabled}
-            onChange={(pickupEnabled) => {
-              if (!pickupEnabled && !draft.deliveryEnabled) return;
-              patch({ pickupEnabled });
-            }}
-            label="Retiro"
-          />
-          <Toggle
-            checked={draft.deliveryEnabled}
-            onChange={(deliveryEnabled) => {
-              if (!deliveryEnabled && !draft.pickupEnabled) return;
-              patch({ deliveryEnabled });
-            }}
-            label="Delivery"
-          />
-        </div>
-        <div>
-          <p className="text-sm font-medium">Foto de portada</p>
-          <ImageChoices
-            images={[...new Set([...uploads, ...COVER_IMAGES])]}
-            selected={draft.cover}
-            allowEmpty={false}
-            onSelect={(cover) => {
-              if (cover) patch({ cover });
-            }}
-            onUpload={async (file) => {
-              try {
-                patch({ cover: await upload(file) });
-              } catch (uploadError) {
-                setError(uploadError instanceof Error ? uploadError.message : "No se pudo subir la foto.");
-              }
-            }}
-          />
-        </div>
-      </section>
+                  return (
+                    <div
+                      key={order.id}
+                      className="rounded-2xl border border-[#DFD8C4] bg-white p-4 sm:p-5 shadow-2xs space-y-3.5 hover:border-[#8F9E4B]/50 transition-all"
+                    >
+                      {/* Top Order Row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#DFD8C4]/60 pb-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-mono text-sm font-black text-[#222421] tracking-wide">
+                            #{order.id}
+                          </span>
+                          <span className="text-[11px] font-sans text-[#5E4B3C]/75">
+                            {dateStr}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-0.5 text-[10px] font-heading font-black uppercase tracking-wider border",
+                              order.fulfillment === "delivery"
+                                ? "bg-amber-500/10 text-amber-800 border-amber-500/25"
+                                : "bg-blue-500/10 text-blue-800 border-blue-500/25",
+                            )}
+                          >
+                            {order.fulfillment === "delivery" ? "🛵 Delivery" : "🏪 Retiro"}
+                          </span>
+                        </div>
 
-      {dirty && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-lg px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-center gap-2 rounded-full bg-foreground p-1.5 pl-4 text-background shadow-lg">
-            <p className="min-w-0 flex-1 text-sm">{error ?? "Cambios sin publicar"}</p>
-            <button type="button" onClick={() => { setDraft(saved); setError(null); }} className="px-2 text-sm">
-              Descartar
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={publish}
-              className="h-10 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "rounded-full px-3 py-1 text-xs font-heading font-black uppercase tracking-wider border shadow-2xs",
+                              order.status === "nuevo" && "bg-amber-500 text-white border-amber-600 animate-pulse",
+                              order.status === "aceptado" && "bg-blue-600 text-white border-blue-700",
+                              order.status === "en_camino" && "bg-purple-600 text-white border-purple-700",
+                              order.status === "completado" && "bg-emerald-600 text-white border-emerald-700",
+                              order.status === "cancelado" && "bg-gray-200 text-gray-700 border-gray-300",
+                            )}
+                          >
+                            {order.status === "nuevo" && "🟡 Nuevo"}
+                            {order.status === "aceptado" && "🔵 Aceptado"}
+                            {order.status === "en_camino" && "🟣 En Camino"}
+                            {order.status === "completado" && "🟢 Completado"}
+                            {order.status === "cancelado" && "⚪ Cancelado"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Customer & Location */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <strong className="text-sm font-heading font-black text-[#222421]">
+                              {order.customerName}
+                            </strong>
+                            <a
+                              href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-heading font-black uppercase tracking-wider text-emerald-800 hover:bg-emerald-500/20"
+                            >
+                              <MessageCircle size={11} className="text-emerald-600" />
+                              <span>WhatsApp</span>
+                            </a>
+                          </div>
+                          <p className="text-[#5E4B3C]/80 font-mono">
+                            Tel: {order.customerPhone}
+                          </p>
+                          {order.customerAddress && (
+                            <p className="flex items-center gap-1 text-[#5E4B3C]">
+                              <MapPin size={12} className="text-[#8F9E4B] shrink-0" />
+                              <span>{order.customerAddress}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 sm:text-right">
+                          <p className="font-heading text-xs font-bold uppercase text-[#5E4B3C]">
+                            Pago: {order.payment === "efectivo" ? "💵 Efectivo" : "💳 Transferencia"}
+                          </p>
+                          {order.note && (
+                            <p className="text-[11px] italic text-[#5E4B3C]/80">
+                              Nota: &quot;{order.note}&quot;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Items details */}
+                      <div className="rounded-xl bg-[#FFFDF2] border border-[#DFD8C4] p-3 space-y-1 text-xs">
+                        <span className="text-[10px] font-heading font-bold uppercase text-[#5E4B3C]/70 block mb-1">
+                          Platos del pedido:
+                        </span>
+                        {order.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-[#222421]">
+                            <span>
+                              <strong>{item.qty}x</strong> {item.name}
+                            </span>
+                            <span className="font-mono text-[#5E4B3C]">
+                              ${(item.price * item.qty).toLocaleString("es-AR")}
+                            </span>
+                          </div>
+                        ))}
+
+                        <div className="border-t border-[#DFD8C4]/60 pt-2 mt-2 flex justify-between items-center font-heading font-black text-sm text-[#222421]">
+                          <span>Total</span>
+                          <span className="text-[#668032]">${order.total.toLocaleString("es-AR")}</span>
+                        </div>
+                      </div>
+
+                      {/* Status Action Buttons (Quick progression) */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#DFD8C4]/60">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {order.status === "nuevo" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrderStatus(order.id, "aceptado")}
+                                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-heading font-black uppercase tracking-wider text-white hover:bg-blue-700 shadow-2xs transition-all cursor-pointer"
+                              >
+                                <Check size={13} />
+                                <span>Aceptar Pedido</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrderStatus(order.id, "cancelado")}
+                                className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                              >
+                                Rechazar
+                              </button>
+                            </>
+                          )}
+
+                          {order.status === "aceptado" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrderStatus(order.id, "en_camino")}
+                                className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-heading font-black uppercase tracking-wider text-white hover:bg-purple-700 shadow-2xs transition-all cursor-pointer"
+                              >
+                                <Truck size={13} />
+                                <span>Despachar (En Camino)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrderStatus(order.id, "completado")}
+                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-heading font-black uppercase tracking-wider text-white hover:bg-emerald-700 transition-all cursor-pointer"
+                              >
+                                <Check size={13} />
+                                <span>Completar</span>
+                              </button>
+                            </>
+                          )}
+
+                          {order.status === "en_camino" && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateOrderStatus(order.id, "completado")}
+                              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-heading font-black uppercase tracking-wider text-white hover:bg-emerald-700 shadow-2xs transition-all cursor-pointer"
+                            >
+                              <PackageCheck size={14} />
+                              <span>Marcar como Entregado</span>
+                            </button>
+                          )}
+
+                          {order.status === "completado" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-heading font-bold uppercase tracking-wider text-emerald-800">
+                              <CheckCircle2 size={15} className="text-emerald-600" />
+                              <span>Pedido Entregado con éxito</span>
+                            </span>
+                          )}
+
+                          {order.status === "cancelado" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-heading font-bold uppercase tracking-wider text-gray-500">
+                              <Ban size={14} />
+                              <span>Pedido Cancelado</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status selector override & delete button */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as OrderStatus)}
+                            className="h-8 rounded-lg border border-[#DFD8C4] bg-white px-2 text-[11px] font-heading font-bold uppercase tracking-wider text-[#222421] outline-none"
+                          >
+                            <option value="nuevo">Nuevo</option>
+                            <option value="aceptado">Aceptado</option>
+                            <option value="en_camino">En Camino</option>
+                            <option value="completado">Completado</option>
+                            <option value="cancelado">Cancelado</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOrder(order.id)}
+                            title="Eliminar registro"
+                            className="size-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB: DISHES & VIANDAS */}
+        {activeTab === "dishes" && (
+          <div className="mt-6 space-y-5">
+            {/* Action Bar: Search, Category Filter, and Add Dish button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-2xl bg-white border border-[#DFD8C4] p-3.5 shadow-2xs">
+              <div className="flex flex-1 items-center gap-2">
+                <div className="relative flex-1 max-w-sm">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5E4B3C]/60" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Buscar por nombre o ingrediente..."
+                    className="h-10 w-full rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] pl-9 pr-3 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
+                  />
+                  {searchFilter && (
+                    <button
+                      onClick={() => setSearchFilter("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#5E4B3C]/60 hover:text-[#222421]"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={selectedCatFilter}
+                  onChange={(e) => setSelectedCatFilter(e.target.value)}
+                  className="h-10 rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] px-3 text-xs font-heading font-bold uppercase tracking-wider text-[#222421] outline-none focus:border-[#8F9E4B]"
+                >
+                  <option value="all">Todas las categorías ({draft.dishes.length})</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({draft.dishes.filter((d) => d.categoryId === c.id).length})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openNewDish()}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#8F9E4B] px-5 py-2.5 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] active:scale-98 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <Plus size={15} />
+                <span>Nuevo Plato</span>
+              </button>
+            </div>
+
+            {/* Dishes Grid */}
+            {filteredDishes.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#DFD8C4] bg-white p-12 text-center">
+                <UtensilsCrossed size={36} className="mx-auto text-[#DFD8C4]" />
+                <p className="mt-3 font-heading font-bold uppercase text-[#5E4B3C]">
+                  No se encontraron platos
+                </p>
+                <p className="mt-1 text-xs text-[#5E4B3C]/70">
+                  Probá ajustando la búsqueda o agregá un nuevo plato al menú.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => openNewDish()}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#8F9E4B] px-4 py-2 text-xs font-heading font-bold uppercase tracking-wider text-white hover:bg-[#7D8B3F]"
+                >
+                  <Plus size={14} />
+                  <span>Crear plato</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {filteredDishes.map((dish) => {
+                  const cat = categories.find((c) => c.id === dish.categoryId);
+                  const isAvail = dish.available;
+
+                  return (
+                    <div
+                      key={dish.id}
+                      className={cn(
+                        "group relative flex items-start gap-3.5 rounded-2xl border bg-white p-3.5 shadow-2xs transition-all hover:border-[#8F9E4B]/60",
+                        isAvail ? "border-[#DFD8C4]" : "border-[#DFD8C4] opacity-65 bg-gray-50/50",
+                      )}
+                    >
+                      {/* Dish Thumbnail */}
+                      <div className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-[#FFFDF2] border border-[#DFD8C4]">
+                        {dish.image ? (
+                          <Image
+                            src={dish.image}
+                            alt={dish.name}
+                            fill
+                            sizes="80px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#5E4B3C]/40">
+                            <UtensilsCrossed size={24} />
+                          </div>
+                        )}
+                        {dish.tag && (
+                          <span className="absolute bottom-1 left-1 right-1 rounded bg-[#222421]/80 px-1 py-0.5 text-center font-heading text-[8px] font-black uppercase text-white truncate">
+                            {dish.tag}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Dish Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="rounded-md bg-[#FFFDF2] border border-[#DFD8C4] px-1.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                            {cat?.name || "Sin categoría"}
+                          </span>
+                          <span className="font-heading font-black text-sm text-[#222421]">
+                            {formatArs(dish.price)}
+                          </span>
+                        </div>
+
+                        <h3 className="mt-1 font-heading font-bold text-sm text-[#222421] truncate">
+                          {dish.name}
+                        </h3>
+                        <p className="mt-0.5 text-xs text-[#5E4B3C]/70 line-clamp-1">
+                          {dish.description}
+                        </p>
+
+                        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[#DFD8C4]/60 pt-2 text-[11px]">
+                          {/* Availability Toggle */}
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isAvail}
+                            onClick={() => updateDish(dish.id, { available: !isAvail })}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wider transition-colors cursor-pointer",
+                              isAvail
+                                ? "bg-emerald-500/10 text-emerald-800 border border-emerald-500/30"
+                                : "bg-red-500/10 text-red-700 border border-red-500/30",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                isAvail ? "bg-emerald-500" : "bg-red-500",
+                              )}
+                            />
+                            <span>{isAvail ? "En carta" : "Agotado"}</span>
+                          </button>
+
+                          {/* Quick Actions */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => moveDish(dish.id, -1)}
+                              title="Subir orden"
+                              className="size-7 rounded-lg border border-[#DFD8C4] bg-white text-[#5E4B3C] hover:bg-[#FFFDF2] hover:text-[#222421] flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveDish(dish.id, 1)}
+                              title="Bajar orden"
+                              className="size-7 rounded-lg border border-[#DFD8C4] bg-white text-[#5E4B3C] hover:bg-[#FFFDF2] hover:text-[#222421] flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCreating(false);
+                                setEditing(dish);
+                              }}
+                              title="Editar plato"
+                              className="size-7 rounded-lg border border-[#8F9E4B]/40 bg-[#8F9E4B]/10 text-[#668032] hover:bg-[#8F9E4B] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeDish(dish)}
+                              title="Eliminar plato"
+                              className="size-7 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB: CATEGORIES */}
+        {activeTab === "categories" && (
+          <div className="mt-6 space-y-6 max-w-2xl">
+            {/* Add Category Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addCategory();
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-[#DFD8C4] bg-white p-3.5 shadow-2xs"
             >
-              {pending ? "Publicando…" : "Publicar"}
-            </button>
+              <input
+                type="text"
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                placeholder="Nombre de la nueva categoría (ej: Guarniciones, Postres)"
+                className="h-10 flex-1 rounded-xl border border-[#DFD8C4] bg-[#FFFDF2] px-3.5 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
+              />
+              <button
+                type="submit"
+                disabled={!categoryName.trim()}
+                className="flex items-center gap-1.5 rounded-xl bg-[#8F9E4B] px-4 py-2.5 text-xs font-heading font-black uppercase tracking-wider text-white hover:bg-[#7D8B3F] disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>Agregar</span>
+              </button>
+            </form>
+
+            {/* Categories List */}
+            <div className="space-y-2.5">
+              {categories.map((cat, index) => {
+                const count = draft.dishes.filter((d) => d.categoryId === cat.id).length;
+                return (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#DFD8C4] bg-white p-3.5 shadow-2xs hover:border-[#8F9E4B]/50 transition-all"
+                  >
+                    <div className="flex flex-1 items-center gap-2.5 min-w-0">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#FFFDF2] border border-[#DFD8C4] font-heading text-xs font-black text-[#5E4B3C]">
+                        {index + 1}
+                      </span>
+                      <input
+                        value={cat.name}
+                        onChange={(e) => updateCategory(cat.id, { name: e.target.value })}
+                        className="flex-1 min-w-0 rounded-lg px-2 py-1 font-heading text-sm font-bold text-[#222421] outline-none hover:bg-[#FFFDF2] focus:bg-[#FFFDF2] focus:ring-1 focus:ring-[#8F9E4B]"
+                      />
+                      <span className="rounded-full bg-[#FFFDF2] border border-[#DFD8C4] px-2.5 py-0.5 text-[10px] font-heading font-bold text-[#5E4B3C] whitespace-nowrap">
+                        {count} {count === 1 ? "plato" : "platos"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveCategory(cat.id, -1)}
+                        className="size-7 rounded-lg border border-[#DFD8C4] bg-white text-[#5E4B3C] hover:bg-[#FFFDF2] disabled:opacity-30 flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <ArrowUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === categories.length - 1}
+                        onClick={() => moveCategory(cat.id, 1)}
+                        className="size-7 rounded-lg border border-[#DFD8C4] bg-white text-[#5E4B3C] hover:bg-[#FFFDF2] disabled:opacity-30 flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <ArrowDown size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeCategory(cat)}
+                        className="size-7 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: LOCAL & DELIVERY */}
+        {activeTab === "store" && (
+          <div className="mt-6 max-w-3xl space-y-6">
+            {/* General Info Card */}
+            <div className="rounded-3xl border border-[#DFD8C4] bg-white p-6 shadow-2xs space-y-4">
+              <h3 className="font-heading text-base font-black uppercase text-[#222421] border-b border-[#DFD8C4]/60 pb-2.5 flex items-center gap-2">
+                <StoreIcon size={16} className="text-[#8F9E4B]" />
+                <span>Datos del Negocio</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  Nombre de la Marca
+                  <input
+                    value={draft.name}
+                    onChange={(e) => patch({ name: e.target.value })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                </label>
+
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  Frase / Descriptor
+                  <input
+                    value={draft.tagline}
+                    onChange={(e) => patch({ tagline: e.target.value })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  WhatsApp para Pedidos
+                  <input
+                    value={draft.whatsapp}
+                    onChange={(e) => patch({ whatsapp: e.target.value })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                  <span className="mt-1 block text-[11px] font-normal text-[#5E4B3C]/70">
+                    Solo números con código de país (ej: 5492235555555).
+                  </span>
+                </label>
+
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  Horarios de Atención y Entrega
+                  <input
+                    value={draft.hours}
+                    onChange={(e) => patch({ hours: e.target.value })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                </label>
+              </div>
+
+              <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                Zona de Cobertura o Dirección
+                <input
+                  value={draft.address}
+                  onChange={(e) => patch({ address: e.target.value })}
+                  className={`${fieldClass} mt-1`}
+                />
+              </label>
+
+              <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                Mensaje de Pago / Confirmación
+                <textarea
+                  value={draft.paymentNote}
+                  rows={2}
+                  onChange={(e) => patch({ paymentNote: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-[#DFD8C4] bg-white p-3 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
+                />
+              </label>
+            </div>
+
+            {/* Delivery & Logistics Card */}
+            <div className="rounded-3xl border border-[#DFD8C4] bg-white p-6 shadow-2xs space-y-4">
+              <h3 className="font-heading text-base font-black uppercase text-[#222421] border-b border-[#DFD8C4]/60 pb-2.5 flex items-center gap-2">
+                <Truck size={16} className="text-[#8F9E4B]" />
+                <span>Configuración de Envíos y Horarios</span>
+              </h3>
+
+              {/* Real-time Schedule Status Display */}
+              {(() => {
+                const schedStatus = getStoreScheduleStatus(draft);
+                return (
+                  <div
+                    className={cn(
+                      "rounded-2xl border p-4 flex items-start gap-3 transition-colors",
+                      schedStatus.canDeliver
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-950"
+                        : "bg-amber-50 border-amber-200 text-amber-950",
+                    )}
+                  >
+                    <Clock
+                      size={18}
+                      className={
+                        schedStatus.canDeliver
+                          ? "text-emerald-600 mt-0.5 shrink-0"
+                          : "text-amber-600 mt-0.5 shrink-0"
+                      }
+                    />
+                    <div className="flex-1 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <strong className="font-heading font-black uppercase tracking-wider text-xs sm:text-sm">
+                          {schedStatus.canDeliver
+                            ? "🟢 Local ABIERTO para delivery"
+                            : "🔴 Local CERRADO para delivery"}
+                        </strong>
+                        <span className="font-mono text-[11px] font-bold opacity-80">
+                          Hora actual (Arg): {schedStatus.currentArgentinaTime} hs
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] opacity-90 leading-relaxed">
+                        {schedStatus.canDeliver
+                          ? "Los clientes pueden pedir delivery con normalidad."
+                          : schedStatus.reason || "Fuera del horario de atención para envíos."}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Shift Hours Selectors */}
+              <div className="rounded-2xl border border-[#DFD8C4] bg-[#FFFDF2] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-heading font-black uppercase tracking-wider text-[#222421]">
+                    Turnos de Delivery (Bloqueo Automático)
+                  </span>
+                  <span className="text-[10px] text-[#5E4B3C]/80">
+                    Se bloquea la compra fuera de estos horarios
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Turno 1 (Mediodía) */}
+                  <div className="rounded-xl border border-[#DFD8C4] bg-white p-3 space-y-2">
+                    <span className="text-[11px] font-heading font-bold uppercase text-[#5E4B3C] block">
+                      Turno Mediodía / Almuerzo
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-[10px] font-bold text-[#5E4B3C]">
+                        Desde
+                        <input
+                          type="time"
+                          value={draft.deliverySchedule?.shifts?.[0]?.from || "11:30"}
+                          onChange={(e) => {
+                            const shifts = [
+                              ...(draft.deliverySchedule?.shifts || [
+                                { from: "11:30", to: "15:00" },
+                                { from: "19:30", to: "22:30" },
+                              ]),
+                            ];
+                            shifts[0] = { from: e.target.value, to: shifts[0]?.to || "15:00" };
+                            patch({
+                              deliverySchedule: { enabled: true, shifts },
+                              hours: `Martes a domingo · ${shifts[0].from} a ${shifts[0].to} y ${shifts[1]?.from || "19:30"} a ${shifts[1]?.to || "22:30"}`,
+                            });
+                          }}
+                          className="mt-1 h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-xs font-bold text-[#222421]"
+                        />
+                      </label>
+                      <label className="text-[10px] font-bold text-[#5E4B3C]">
+                        Hasta
+                        <input
+                          type="time"
+                          value={draft.deliverySchedule?.shifts?.[0]?.to || "15:00"}
+                          onChange={(e) => {
+                            const shifts = [
+                              ...(draft.deliverySchedule?.shifts || [
+                                { from: "11:30", to: "15:00" },
+                                { from: "19:30", to: "22:30" },
+                              ]),
+                            ];
+                            shifts[0] = { from: shifts[0]?.from || "11:30", to: e.target.value };
+                            patch({
+                              deliverySchedule: { enabled: true, shifts },
+                              hours: `Martes a domingo · ${shifts[0].from} a ${shifts[0].to} y ${shifts[1]?.from || "19:30"} a ${shifts[1]?.to || "22:30"}`,
+                            });
+                          }}
+                          className="mt-1 h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-xs font-bold text-[#222421]"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Turno 2 (Noche) */}
+                  <div className="rounded-xl border border-[#DFD8C4] bg-white p-3 space-y-2">
+                    <span className="text-[11px] font-heading font-bold uppercase text-[#5E4B3C] block">
+                      Turno Noche / Cena
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-[10px] font-bold text-[#5E4B3C]">
+                        Desde
+                        <input
+                          type="time"
+                          value={draft.deliverySchedule?.shifts?.[1]?.from || "19:30"}
+                          onChange={(e) => {
+                            const shifts = [
+                              ...(draft.deliverySchedule?.shifts || [
+                                { from: "11:30", to: "15:00" },
+                                { from: "19:30", to: "22:30" },
+                              ]),
+                            ];
+                            shifts[1] = { from: e.target.value, to: shifts[1]?.to || "22:30" };
+                            patch({
+                              deliverySchedule: { enabled: true, shifts },
+                              hours: `Martes a domingo · ${shifts[0]?.from || "11:30"} a ${shifts[0]?.to || "15:00"} y ${shifts[1].from} a ${shifts[1].to}`,
+                            });
+                          }}
+                          className="mt-1 h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-xs font-bold text-[#222421]"
+                        />
+                      </label>
+                      <label className="text-[10px] font-bold text-[#5E4B3C]">
+                        Hasta
+                        <input
+                          type="time"
+                          value={draft.deliverySchedule?.shifts?.[1]?.to || "22:30"}
+                          onChange={(e) => {
+                            const shifts = [
+                              ...(draft.deliverySchedule?.shifts || [
+                                { from: "11:30", to: "15:00" },
+                                { from: "19:30", to: "22:30" },
+                              ]),
+                            ];
+                            shifts[1] = { from: shifts[1]?.from || "19:30", to: e.target.value };
+                            patch({
+                              deliverySchedule: { enabled: true, shifts },
+                              hours: `Martes a domingo · ${shifts[0]?.from || "11:30"} a ${shifts[0]?.to || "15:00"} y ${shifts[1].from} a ${shifts[1].to}`,
+                            });
+                          }}
+                          className="mt-1 h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-xs font-bold text-[#222421]"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  Costo de Envío ($)
+                  <input
+                    type="number"
+                    min={0}
+                    value={draft.deliveryFee}
+                    onChange={(e) => patch({ deliveryFee: Math.max(0, Number(e.target.value) || 0) })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                </label>
+
+                <label className="block text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C]">
+                  Pedido Mínimo ($)
+                  <input
+                    type="number"
+                    min={0}
+                    value={draft.deliveryMin}
+                    onChange={(e) => patch({ deliveryMin: Math.max(0, Number(e.target.value) || 0) })}
+                    className={`${fieldClass} mt-1`}
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <label className="flex items-center gap-2.5 rounded-xl border border-[#DFD8C4] p-3 text-xs font-heading font-bold text-[#222421] cursor-pointer hover:bg-[#FFFDF2]">
+                  <input
+                    type="checkbox"
+                    checked={draft.deliveryEnabled}
+                    onChange={(e) => patch({ deliveryEnabled: e.target.checked })}
+                    className="size-4 rounded text-[#8F9E4B] focus:ring-[#8F9E4B]"
+                  />
+                  <span>Permitir Delivery a domicilio</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-xl border border-[#DFD8C4] p-3 text-xs font-heading font-bold text-[#222421] cursor-pointer hover:bg-[#FFFDF2]">
+                  <input
+                    type="checkbox"
+                    checked={draft.pickupEnabled}
+                    onChange={(e) => patch({ pickupEnabled: e.target.checked })}
+                    className="size-4 rounded text-[#8F9E4B] focus:ring-[#8F9E4B]"
+                  />
+                  <span>Permitir Retiro por el local</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: DATABASE & CLOUD SYNC */}
+        {activeTab === "database" && (
+          <div className="mt-6 max-w-2xl space-y-5">
+            <div className="rounded-3xl border border-[#DFD8C4] bg-white p-6 shadow-2xs space-y-4">
+              <h3 className="font-heading text-base font-black uppercase text-[#222421] border-b border-[#DFD8C4]/60 pb-2.5 flex items-center gap-2">
+                <Cloud size={16} className="text-[#8F9E4B]" />
+                <span>Estado de la Nube</span>
+              </h3>
+
+              <div className="rounded-2xl bg-[#FFFDF2] border border-[#DFD8C4] p-4 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-[#5E4B3C]">Motor de Base de Datos:</span>
+                  <span className="font-black text-[#222421]">
+                    {isFirebase ? "Google Cloud Firestore" : "Almacenamiento Local JSON"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-[#5E4B3C]">Colección:</span>
+                  <span className="font-mono text-[#222421]">stores / abriyservi & orders</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-[#5E4B3C]">Total Platos:</span>
+                  <span className="font-black text-[#8F9E4B]">{draft.dishes.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-bold text-[#5E4B3C]">Total Pedidos Registrados:</span>
+                  <span className="font-black text-[#8F9E4B]">{orders.length}</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={publish}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#8F9E4B] py-3 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  <Cloud size={16} />
+                  <span>Sincronizar y Forzar Guardado en Firestore</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Floating Bottom Action Bar for Store Changes */}
+      {dirty && (
+        <div className="fixed inset-x-0 bottom-4 z-40 mx-auto w-full max-w-xl px-4 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center justify-between gap-3 rounded-full bg-[#222421] p-2 pl-5 text-[#FFFDF2] shadow-2xl border border-white/20">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="size-2 rounded-full bg-[#8F9E4B] animate-ping" />
+              <span className="font-heading font-bold uppercase tracking-wider text-amber-300">
+                Cambios pendientes sin publicar
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(saved);
+                  setError(null);
+                }}
+                className="rounded-full px-3 py-1.5 text-xs font-heading font-bold uppercase tracking-wider text-[#FFFDF2]/70 hover:text-white"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={publish}
+                className="flex items-center gap-1.5 rounded-full bg-[#8F9E4B] px-5 py-2 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] disabled:opacity-60 transition-all cursor-pointer"
+              >
+                <Check size={14} />
+                <span>{pending ? "Guardando…" : "Publicar"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
-      {!dirty && status && <p className="px-5 pt-6 text-sm text-accent">{status}</p>}
-      {!dirty && error && <p className="px-5 pt-6 text-sm text-primary">{error}</p>}
 
-      <DishDialog
+      {/* Centered Dish Modal */}
+      <DishModal
         dish={editing}
         categories={categories}
         uploads={uploads}
+        isCreating={creating}
         onChange={setEditing}
         onClose={() => {
           setEditing(null);
@@ -537,186 +1580,20 @@ function Editor({ initial, isFirebase = false }: { initial: Store; isFirebase?: 
         }}
         onCommit={commitDish}
         onUpload={upload}
-        onUploadError={(message) => setError(message)}
+        onUploadError={(msg) => setError(msg)}
       />
     </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  hint,
-  warn,
-  multiline,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  hint?: string;
-  warn?: boolean;
-  multiline?: boolean;
-}) {
-  return (
-    <label className="block text-sm font-medium">
-      {label}
-      {multiline ? (
-        <textarea
-          value={value}
-          rows={3}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-1.5 w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} className={`${fieldClass} mt-1.5`} />
-      )}
-      {hint && (
-        <span className={cn("mt-1 block font-normal", warn ? "text-primary" : "text-muted-foreground")}>
-          {hint}
-        </span>
-      )}
-    </label>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="block text-sm font-medium">
-      {label}
-      <input
-        type="number"
-        min={0}
-        inputMode="numeric"
-        value={value}
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          onChange(Number.isFinite(next) && next >= 0 ? Math.round(next) : 0);
-        }}
-        className={`${fieldClass} mt-1.5`}
-      />
-    </label>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "h-12 rounded-2xl text-sm font-semibold",
-        checked ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function TextButton({
-  children,
-  disabled,
-  onClick,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className="text-sm text-muted-foreground disabled:opacity-30">
-      {children}
-    </button>
-  );
-}
-
-function Thumb({ src }: { src: string | null }) {
-  if (!src) {
-    return <span className="size-14 shrink-0 rounded-2xl bg-muted" />;
-  }
-  return (
-    <span className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-muted">
-      <Image src={src} alt="" fill sizes="56px" className="object-cover" />
-    </span>
-  );
-}
-
-function ImageChoices({
-  images,
-  selected,
-  allowEmpty = true,
-  onSelect,
-  onUpload,
-}: {
-  images: string[];
-  selected: string | null;
-  allowEmpty?: boolean;
-  onSelect: (src: string | null) => void;
-  onUpload: (file: File) => void;
-}) {
-  return (
-    <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-      {allowEmpty && (
-        <button
-          type="button"
-          onClick={() => onSelect(null)}
-          className={cn(
-            "grid size-16 shrink-0 place-items-center rounded-2xl bg-muted text-xs",
-            selected === null && "ring-2 ring-primary",
-          )}
-        >
-          Sin foto
-        </button>
-      )}
-      {images.map((src) => (
-        <button
-          key={src}
-          type="button"
-          onClick={() => onSelect(src)}
-          className={cn("relative size-16 shrink-0 overflow-hidden rounded-2xl", selected === src && "ring-2 ring-primary")}
-        >
-          <Image src={src} alt="" fill sizes="64px" className="object-cover" />
-        </button>
-      ))}
-      <label className="grid size-16 shrink-0 cursor-pointer place-items-center rounded-2xl border border-dashed border-border text-xs">
-        Subir
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (file) onUpload(file);
-          }}
-        />
-      </label>
-    </div>
-  );
-}
-
-function DishDialog({
+/**
+ * Centered, clean, high-contrast modal dialog for editing and adding dishes
+ */
+function DishModal({
   dish,
   categories,
   uploads,
+  isCreating,
   onChange,
   onClose,
   onCommit,
@@ -726,77 +1603,398 @@ function DishDialog({
   dish: Dish | null;
   categories: Category[];
   uploads: string[];
+  isCreating: boolean;
   onChange: (dish: Dish) => void;
   onClose: () => void;
   onCommit: () => void;
   onUpload: (file: File) => Promise<string>;
   onUploadError: (message: string) => void;
 }) {
-  const images = [...new Set([...(dish?.image ? [dish.image] : []), ...uploads, ...FOOD_IMAGES])];
+  const allImages = useMemo(() => {
+    return [
+      ...new Set([
+        ...(dish?.image ? [dish.image] : []),
+        ...uploads,
+        ...FOOD_IMAGES,
+      ]),
+    ];
+  }, [dish?.image, uploads]);
+
+  if (!dish) return null;
+
+  const currentNutri = dish.nutrition || {
+    calories: 420,
+    proteins: 35,
+    carbs: 28,
+    fats: 12,
+  };
 
   return (
     <Dialog.Root open={Boolean(dish)} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-[#2a2118]/45" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-t-[1.6rem] bg-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] outline-none">
-          <Dialog.Title className="font-display text-3xl">Plato</Dialog.Title>
-          <Dialog.Description className="sr-only">Editar plato</Dialog.Description>
-          {dish && (
-            <div className="mt-4 space-y-3">
-              <Field label="Nombre" value={dish.name} onChange={(name) => onChange({ ...dish, name })} />
-              <Field
-                label="Descripción"
-                value={dish.description}
-                onChange={(description) => onChange({ ...dish, description })}
-                multiline
-              />
-              <NumberField label="Precio" value={dish.price} onChange={(price) => onChange({ ...dish, price })} />
-              <label className="block text-sm font-medium">
-                Categoría
-                <select
-                  value={dish.categoryId}
-                  onChange={(event) => onChange({ ...dish, categoryId: event.target.value })}
-                  className={`${fieldClass} mt-1.5`}
-                >
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Toggle
-                label={dish.available ? "Visible en la carta" : "Agotado"}
-                checked={dish.available}
-                onChange={(available) => onChange({ ...dish, available })}
-              />
+        {/* Dimmed Blurred Backdrop */}
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[#222421]/75 backdrop-blur-sm animate-in fade-in duration-200" />
+
+        {/* Centered Modal Container */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <Dialog.Content className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#FFFDF2] border border-[#DFD8C4] shadow-2xl p-5 sm:p-7 text-[#222421] outline-none animate-in zoom-in-95 duration-200 my-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#DFD8C4] pb-3 mb-4">
               <div>
-                <p className="text-sm font-medium">Foto</p>
-                <ImageChoices
-                  images={images}
-                  selected={dish.image}
-                  onSelect={(image) => onChange({ ...dish, image })}
-                  onUpload={async (file) => {
-                    try {
-                      onChange({ ...dish, image: await onUpload(file) });
-                    } catch (uploadError) {
-                      onUploadError(uploadError instanceof Error ? uploadError.message : "No se pudo subir la foto.");
-                    }
-                  }}
-                />
+                <Dialog.Title className="font-heading text-xl font-black uppercase tracking-tight text-[#222421]">
+                  {isCreating ? "Crear Nuevo Plato" : "Editar Plato"}
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-[#5E4B3C]/75">
+                  Completá los datos del plato y sus especificaciones al vacío.
+                </Dialog.Description>
               </div>
-              {!dish.name.trim() && <p className="text-sm text-primary">El plato necesita un nombre.</p>}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="size-8 rounded-full bg-white border border-[#DFD8C4] text-[#5E4B3C] hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <div className="space-y-4">
+              {/* 1. Main Info */}
+              <div className="rounded-2xl border border-[#DFD8C4] bg-white p-4 space-y-3 shadow-2xs">
+                <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] block">
+                  1. Información Principal
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Nombre del Plato *
+                    </label>
+                    <input
+                      type="text"
+                      value={dish.name}
+                      onChange={(e) => onChange({ ...dish, name: e.target.value })}
+                      placeholder="Ej: Bondiola braseada al vacío"
+                      className={`${fieldClass} mt-1`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Precio ($)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={dish.price}
+                      onChange={(e) =>
+                        onChange({ ...dish, price: Math.max(0, Number(e.target.value) || 0) })
+                      }
+                      className={`${fieldClass} mt-1`}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Categoría
+                    </label>
+                    <select
+                      value={dish.categoryId}
+                      onChange={(e) => onChange({ ...dish, categoryId: e.target.value })}
+                      className={`${fieldClass} mt-1`}
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Tag Distintivo
+                    </label>
+                    <input
+                      type="text"
+                      value={dish.tag || ""}
+                      onChange={(e) => onChange({ ...dish, tag: e.target.value })}
+                      placeholder="Ej: 48G PROTEÍNA, PUNTO BABÉ"
+                      className={`${fieldClass} mt-1`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                    Descripción / Ingredientes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={dish.description}
+                    onChange={(e) => onChange({ ...dish, description: e.target.value })}
+                    placeholder="Descripción apetitosa del plato y su guarnición..."
+                    className="mt-1 w-full rounded-xl border border-[#DFD8C4] bg-white p-3 text-xs text-[#222421] outline-none focus:border-[#8F9E4B]"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Vacuum & Regenerate Specs */}
+              <div className="rounded-2xl border border-[#DFD8C4] bg-white p-4 space-y-3 shadow-2xs">
+                <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] block">
+                  2. Envasado al Vacío & Regeneración
+                </span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Peso de la Porción
+                    </label>
+                    <input
+                      type="text"
+                      value={dish.weight || ""}
+                      onChange={(e) => onChange({ ...dish, weight: e.target.value })}
+                      placeholder="Ej: 450g"
+                      className={`${fieldClass} mt-1`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                      Tiempo de Regeneración
+                    </label>
+                    <input
+                      type="text"
+                      value={dish.regenTime || ""}
+                      onChange={(e) => onChange({ ...dish, regenTime: e.target.value })}
+                      placeholder="Ej: 8-10 min"
+                      className={`${fieldClass} mt-1`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-bold uppercase text-[#5E4B3C]">
+                    Instrucción de Regeneración
+                  </label>
+                  <input
+                    type="text"
+                    value={dish.method || ""}
+                    onChange={(e) => onChange({ ...dish, method: e.target.value })}
+                    placeholder="Ej: Sumergí la bolsa 8 a 10 min en agua hirviendo · Abrí y serví"
+                    className={`${fieldClass} mt-1`}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Nutrition Information (Collapsible / Optional) */}
+              <div className="rounded-2xl border border-[#DFD8C4] bg-white p-4 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] flex items-center gap-1.5">
+                    <Activity size={13} />
+                    <span>3. Información Nutricional (Macros)</span>
+                  </span>
+                  <span className="text-[10px] text-[#5E4B3C]/70">Por porción</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-heading font-bold uppercase text-[#5E4B3C]">
+                      Calorías
+                    </label>
+                    <input
+                      type="number"
+                      value={currentNutri.calories}
+                      onChange={(e) =>
+                        onChange({
+                          ...dish,
+                          nutrition: {
+                            ...currentNutri,
+                            calories: Number(e.target.value) || 0,
+                          },
+                        })
+                      }
+                      className="h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-center text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-heading font-bold uppercase text-[#668032]">
+                      Proteínas (g)
+                    </label>
+                    <input
+                      type="number"
+                      value={currentNutri.proteins}
+                      onChange={(e) =>
+                        onChange({
+                          ...dish,
+                          nutrition: {
+                            ...currentNutri,
+                            proteins: Number(e.target.value) || 0,
+                          },
+                        })
+                      }
+                      className="h-9 w-full rounded-lg border border-[#8F9E4B]/40 bg-[#8F9E4B]/10 px-2 text-center text-xs font-black text-[#668032]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-heading font-bold uppercase text-[#5E4B3C]">
+                      Carbos (g)
+                    </label>
+                    <input
+                      type="number"
+                      value={currentNutri.carbs}
+                      onChange={(e) =>
+                        onChange({
+                          ...dish,
+                          nutrition: {
+                            ...currentNutri,
+                            carbs: Number(e.target.value) || 0,
+                          },
+                        })
+                      }
+                      className="h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-center text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-heading font-bold uppercase text-[#5E4B3C]">
+                      Grasas (g)
+                    </label>
+                    <input
+                      type="number"
+                      value={currentNutri.fats}
+                      onChange={(e) =>
+                        onChange({
+                          ...dish,
+                          nutrition: {
+                            ...currentNutri,
+                            fats: Number(e.target.value) || 0,
+                          },
+                        })
+                      }
+                      className="h-9 w-full rounded-lg border border-[#DFD8C4] bg-[#FFFDF2] px-2 text-center text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Dish Photo */}
+              <div className="rounded-2xl border border-[#DFD8C4] bg-white p-4 space-y-3 shadow-2xs">
+                <span className="text-[10px] font-heading font-black uppercase tracking-wider text-[#8F9E4B] block">
+                  4. Foto del Plato
+                </span>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...dish, image: null })}
+                    className={cn(
+                      "flex size-16 shrink-0 flex-col items-center justify-center rounded-xl border text-[10px] font-heading font-bold uppercase cursor-pointer transition-all",
+                      dish.image === null
+                        ? "border-[#8F9E4B] bg-[#8F9E4B]/10 text-[#668032] ring-2 ring-[#8F9E4B]"
+                        : "border-[#DFD8C4] bg-[#FFFDF2] text-[#5E4B3C]",
+                    )}
+                  >
+                    <span>Sin foto</span>
+                  </button>
+
+                  {allImages.map((src) => (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => onChange({ ...dish, image: src })}
+                      className={cn(
+                        "relative size-16 shrink-0 overflow-hidden rounded-xl border cursor-pointer transition-all",
+                        dish.image === src
+                          ? "border-[#8F9E4B] ring-2 ring-[#8F9E4B]"
+                          : "border-[#DFD8C4] hover:opacity-80",
+                      )}
+                    >
+                      <Image src={src} alt="" fill sizes="64px" className="object-cover" />
+                    </button>
+                  ))}
+
+                  <label className="flex size-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#8F9E4B] bg-[#8F9E4B]/5 text-[10px] font-heading font-bold uppercase text-[#8F9E4B] hover:bg-[#8F9E4B]/10 transition-colors">
+                    <span>+ Subir</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        try {
+                          const uploadedPath = await onUpload(file);
+                          onChange({ ...dish, image: uploadedPath });
+                        } catch (err) {
+                          onUploadError(
+                            err instanceof Error ? err.message : "Error al subir la imagen.",
+                          );
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 5. Availability Switch */}
+              <div className="flex items-center justify-between rounded-2xl border border-[#DFD8C4] bg-white p-3.5 shadow-2xs">
+                <div>
+                  <span className="font-heading text-xs font-bold uppercase text-[#222421] block">
+                    Disponibilidad en Carta
+                  </span>
+                  <span className="text-[11px] text-[#5E4B3C]/70">
+                    {dish.available
+                      ? "Visible y disponible para comprar."
+                      : "Marcado como agotado en la web."}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={dish.available}
+                  onClick={() => onChange({ ...dish, available: !dish.available })}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-heading font-bold uppercase tracking-wider transition-all cursor-pointer",
+                    dish.available
+                      ? "bg-emerald-500 text-white"
+                      : "bg-red-500 text-white",
+                  )}
+                >
+                  <span className="size-2 rounded-full bg-white animate-pulse" />
+                  <span>{dish.available ? "Disponible" : "Agotado"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-[#DFD8C4] pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full px-4 py-2 text-xs font-heading font-bold uppercase tracking-wider text-[#5E4B3C] hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
               <button
                 type="button"
                 disabled={!dish.name.trim()}
                 onClick={onCommit}
-                className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full bg-[#8F9E4B] px-6 py-2.5 text-xs font-heading font-black uppercase tracking-wider text-white shadow-md hover:bg-[#7D8B3F] disabled:opacity-50 transition-all cursor-pointer"
               >
-                Listo
+                <Check size={14} />
+                <span>{isCreating ? "Crear Plato" : "Guardar Cambios"}</span>
               </button>
             </div>
-          )}
-        </Dialog.Content>
+          </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

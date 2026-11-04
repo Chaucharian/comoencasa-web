@@ -300,11 +300,11 @@ export function DishShowcaseSection({
               <button
                 onClick={handleAdd}
                 type="button"
-                className="w-full py-3.5 sm:py-4 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-black text-xs sm:text-sm uppercase tracking-wider hover:bg-[#7D8B3F] active:scale-98 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mb-2"
+                className="w-full py-3.5 sm:py-4 rounded-full bg-[#68A01E] text-[#FFFDF2] font-heading font-black text-xs sm:text-sm uppercase tracking-wider hover:bg-[#598B17] active:scale-98 transition-all shadow-md shadow-[#68A01E]/30 flex items-center justify-center gap-2 cursor-pointer mb-2"
               >
                 <ShoppingBag size={17} />
                 <span>
-                  Agregar al pedido • ${(currentDish.price * currentQty).toLocaleString("es-AR")}
+                  AGREGAR AL PEDIDO • ${(currentDish.price * currentQty).toLocaleString("es-AR")}
                 </span>
               </button>
 

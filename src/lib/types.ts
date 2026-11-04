@@ -31,6 +31,16 @@ export type Dish = {
   nutrition?: NutritionInfo;
 };
 
+export type DeliveryShift = {
+  from: string;
+  to: string;
+};
+
+export type DeliverySchedule = {
+  enabled?: boolean;
+  shifts?: DeliveryShift[];
+};
+
 export type Store = {
   name: string;
   tagline: string;
@@ -38,6 +48,7 @@ export type Store = {
   whatsapp: string;
   address: string;
   hours: string;
+  deliverySchedule?: DeliverySchedule;
   about: string;
   open: boolean;
   pickupEnabled: boolean;
@@ -69,4 +80,31 @@ export type Customer = {
   when: string;
   payment: Payment;
   note: string;
+};
+
+export type OrderStatus = "nuevo" | "aceptado" | "en_camino" | "completado" | "cancelado";
+
+export type OrderItem = {
+  dishId: string;
+  name: string;
+  price: number;
+  qty: number;
+  note?: string;
+};
+
+export type Order = {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress?: string;
+  fulfillment: Fulfillment;
+  payment: Payment;
+  note?: string;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  status: OrderStatus;
+  created_at: string;
+  updated_at: string;
 };

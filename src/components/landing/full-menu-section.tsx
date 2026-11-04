@@ -36,14 +36,11 @@ export function FullMenuSection({
   const [searchQuery, setSearchQuery] = useState("");
   const [inspectedDish, setInspectedDish] = useState<Dish | null>(null);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
-  const [expandedNutritionIds, setExpandedNutritionIds] = useState<Record<string, boolean>>({});
+  const [showAllNutrition, setShowAllNutrition] = useState(false);
 
-  const toggleNutrition = (dishId: string, e: React.MouseEvent) => {
+  const toggleNutrition = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setExpandedNutritionIds((prev) => ({
-      ...prev,
-      [dishId]: !prev[dishId],
-    }));
+    setShowAllNutrition((prev) => !prev);
   };
 
   // Filtered dishes
@@ -120,27 +117,47 @@ export function FullMenuSection({
             })}
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5E4B3C]"
-            />
-            <input
-              type="text"
-              placeholder="Buscar por plato o ingrediente..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] text-xs font-sans text-[#222421] placeholder:text-[#5E4B3C]/60 focus:outline-none focus:border-[#8F9E4B] focus:ring-1 focus:ring-[#8F9E4B]"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5E4B3C] hover:text-[#222421]"
-              >
-                <X size={14} />
-              </button>
-            )}
+          {/* Controls: Nutrition Toggle & Search Box */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowAllNutrition((prev) => !prev)}
+              className={`px-3.5 py-2 rounded-full text-xs font-heading font-black uppercase tracking-wider flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer ${
+                showAllNutrition
+                  ? "bg-[#68A01E] text-[#FFFDF2] border-[#68A01E] shadow-sm"
+                  : "bg-[#FFFFFF] text-[#5E4B3C] border-[#DFD8C4] hover:border-[#68A01E] hover:text-[#222421]"
+              }`}
+              title="Mostrar u ocultar información nutricional en todos los platos"
+            >
+              <Activity size={14} className={showAllNutrition ? "text-[#FFFDF2]" : "text-[#68A01E]"} />
+              <span className="hidden xs:inline">
+                {showAllNutrition ? "Ocultar Macros" : "Ver Macros en Todos"}
+              </span>
+              <span className="xs:hidden">Macros</span>
+            </button>
+
+            {/* Search Box */}
+            <div className="relative flex-1 md:w-72">
+              <Search
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5E4B3C]"
+              />
+              <input
+                type="text"
+                placeholder="Buscar plato o ingrediente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-full bg-[#FFFFFF] border border-[#DFD8C4] text-xs font-sans text-[#222421] placeholder:text-[#5E4B3C]/60 focus:outline-none focus:border-[#68A01E] focus:ring-1 focus:ring-[#68A01E]"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5E4B3C] hover:text-[#222421]"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -211,10 +228,10 @@ export function FullMenuSection({
                       {dish.description}
                     </p>
 
-                    {/* Collapsible Nutritional Information */}
+                    {/* Collapsible Nutritional Information (Synced across all cards) */}
                     {(() => {
                       const nutri = getDishNutrition(dish);
-                      const isExpanded = Boolean(expandedNutritionIds[dish.id]);
+                      const isExpanded = showAllNutrition;
                       return (
                         <div
                           className="mt-3 pt-2.5 border-t border-[#DFD8C4]/50"
@@ -222,18 +239,19 @@ export function FullMenuSection({
                         >
                           <button
                             type="button"
-                            onClick={(e) => toggleNutrition(dish.id, e)}
-                            className="w-full flex items-center justify-between text-left text-[11px] font-heading font-bold text-[#5E4B3C] hover:text-[#8F9E4B] transition-colors py-0.5 group/nutri cursor-pointer"
+                            onClick={toggleNutrition}
+                            className="w-full flex items-center justify-between text-left text-[11px] font-heading font-bold text-[#5E4B3C] hover:text-[#68A01E] transition-colors py-0.5 group/nutri cursor-pointer"
                             aria-expanded={isExpanded}
+                            title="Ver u ocultar información nutricional en todos los platos"
                           >
                             <span className="flex items-center gap-1.5">
                               <Activity
                                 size={13}
-                                className="text-[#8F9E4B] group-hover/nutri:scale-110 transition-transform"
+                                className="text-[#68A01E] group-hover/nutri:scale-110 transition-transform"
                               />
                               <span className="tracking-wide">Info Nutricional</span>
                             </span>
-                            <span className="flex items-center gap-1 text-[10px] text-[#8F9E4B] font-bold">
+                            <span className="flex items-center gap-1 text-[10px] text-[#68A01E] font-bold">
                               <span>{isExpanded ? "Ocultar" : "Ver macros"}</span>
                               <ChevronDown
                                 size={12}
@@ -327,21 +345,21 @@ export function FullMenuSection({
                     <button
                       onClick={(e) => handleQuickAdd(dish, e)}
                       type="button"
-                      className={`px-3.5 py-2 rounded-full font-heading text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs ${
+                      className={`px-4 py-2 rounded-full font-heading text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                         recentlyAddedId === dish.id
-                          ? "bg-[#668032] text-[#FFFDF2]"
-                          : "bg-[#8F9E4B] text-[#FFFDF2] hover:bg-[#7D8B3F] active:scale-95"
+                          ? "bg-[#558316] text-[#FFFDF2] shadow-sm"
+                          : "bg-[#68A01E] text-[#FFFDF2] hover:bg-[#598B17] shadow-md shadow-[#68A01E]/30 hover:scale-[1.03] active:scale-95"
                       }`}
                     >
                       {recentlyAddedId === dish.id ? (
                         <>
-                          <Check size={14} />
+                          <Check size={14} className="stroke-[3]" />
                           <span>Listo</span>
                         </>
                       ) : (
                         <>
-                          <Plus size={14} />
-                          <span>Sumar</span>
+                          <Plus size={14} className="stroke-[3]" />
+                          <span>AGREGAR</span>
                         </>
                       )}
                     </button>
@@ -513,10 +531,10 @@ export function FullMenuSection({
                     setInspectedDish(null);
                   }}
                   type="button"
-                  className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-black text-xs uppercase tracking-wider hover:bg-[#7D8B3F] transition-all shadow-md flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#68A01E] text-[#FFFDF2] font-heading font-black text-xs sm:text-sm uppercase tracking-wider hover:bg-[#598B17] hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#68A01E]/30 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Plus size={16} />
-                  <span>Agregar al pedido</span>
+                  <Plus size={16} className="stroke-[3]" />
+                  <span>AGREGAR AL PEDIDO</span>
                 </button>
               </div>
             </div>

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { ArrowDown, Flame, Timer, ShieldCheck, Snowflake } from "lucide-react";
+import { ArrowDown, Flame, Timer, ShieldCheck, Snowflake, Truck, Sparkles } from "lucide-react";
 
 interface StepInfo {
   id: string;
@@ -400,14 +400,22 @@ export function HeroSection() {
           }}
         >
           <div className="max-w-3xl mx-auto flex flex-col items-center w-full">
-            {/* Main Claim: calibrated for perfect mobile vertical rhythm */}
-            <h1 className="font-heading font-black text-xl sm:text-3xl md:text-5xl lg:text-6xl text-[#FFFDF2] uppercase tracking-tight leading-[1.1] text-balance mb-1.5 sm:mb-3">
-              De la olla al plato en 8 minutos.
+            {/* Delivery badge */}
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-[#8F9E4B]/20 backdrop-blur-md border border-[#8F9E4B]/40 text-[#FFFDF2] mb-2 sm:mb-3 shadow-lg">
+              <Truck size={14} className="text-[#8F9E4B] shrink-0" />
+              <span className="text-[11px] sm:text-xs font-heading font-black tracking-wider uppercase">
+                Viandas Caseras · Delivery a tu casa
+              </span>
+            </div>
+
+            {/* Main Claim */}
+            <h1 className="font-heading font-black text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-[#FFFDF2] uppercase tracking-tight leading-[1.08] text-balance mb-2 sm:mb-3">
+              Tus viandas caseras listas en tu heladera.
             </h1>
 
             {/* Direct & Simple Descriptor */}
-            <p className="font-sans text-xs sm:text-base md:text-lg text-[#FFFDF2]/90 font-normal max-w-sm sm:max-w-lg text-balance mb-3 sm:mb-5 leading-normal sm:leading-relaxed">
-              Comida casera envasada al vacío. Calentá en agua hirviendo y serví sin ensuciar una sola olla.
+            <p className="font-sans text-xs sm:text-base md:text-lg text-[#FFFDF2]/90 font-normal max-w-sm sm:max-w-xl text-balance mb-3 sm:mb-5 leading-normal sm:leading-relaxed">
+              Comida de verdad, recién cocinada y envasada al vacío con delivery directo a tu puerta. Stockeá tu semana, calentá 8 min en agua y comé casero sin cocinar ni lavar platos.
             </p>
 
             {/* Action Buttons: Strictly Horizontal on mobile & desktop */}
@@ -416,7 +424,7 @@ export function HeroSection() {
                 href="#carta-completa"
                 className="flex-1 py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-full bg-[#8F9E4B] text-[#FFFDF2] font-heading font-extrabold text-[11px] sm:text-sm tracking-wider uppercase shadow-xl hover:bg-[#7D8B3F] active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer whitespace-nowrap"
               >
-                <span>Ver Platos</span>
+                <span>Ver Viandas</span>
                 <ArrowDown size={14} className="group-hover:translate-y-0.5 transition-transform shrink-0" />
               </a>
 
@@ -426,25 +434,25 @@ export function HeroSection() {
                 className="flex-1 py-2.5 sm:py-3.5 px-3 sm:px-5 rounded-full bg-[#FFFDF2]/15 backdrop-blur-md border border-[#FFFDF2]/30 text-[#FFFDF2] font-heading font-bold text-[11px] sm:text-sm tracking-wider uppercase hover:bg-[#FFFDF2]/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap"
               >
                 <Flame size={14} className="text-[#8F9E4B] shrink-0" />
-                <span>El Paso a Paso</span>
+                <span>Cómo Funciona</span>
               </button>
             </div>
 
             {/* Full-width indicators strip: spans to the screen limits with no left/right borders */}
             <div className="w-screen -mx-4 sm:-mx-6 flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 bg-[#222421]/75 backdrop-blur-md border-y border-[#FFFDF2]/15 border-x-0 text-[#FFFDF2] shadow-md flex-nowrap whitespace-nowrap">
               <div className="inline-flex items-center gap-1">
-                <Timer size={10} className="text-[#8F9E4B] shrink-0" />
+                <Truck size={11} className="text-[#8F9E4B] shrink-0" />
                 <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
-                  8-10 min
+                  Delivery a domicilio
                 </span>
               </div>
 
               <span className="text-[#FFFDF2]/25 text-[10px] select-none">•</span>
 
               <div className="inline-flex items-center gap-1">
-                <ShieldCheck size={10} className="text-[#8F9E4B] shrink-0" />
+                <Timer size={10} className="text-[#8F9E4B] shrink-0" />
                 <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
-                  0% Conservantes
+                  Listas en 8 min
                 </span>
               </div>
 
@@ -454,6 +462,15 @@ export function HeroSection() {
                 <Snowflake size={10} className="text-[#8F9E4B] shrink-0" />
                 <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
                   7d heladera · 3m freezer
+                </span>
+              </div>
+
+              <span className="text-[#FFFDF2]/25 text-[10px] select-none">•</span>
+
+              <div className="inline-flex items-center gap-1">
+                <ShieldCheck size={10} className="text-[#8F9E4B] shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-heading font-bold uppercase tracking-wider">
+                  0% Conservantes
                 </span>
               </div>
             </div>
