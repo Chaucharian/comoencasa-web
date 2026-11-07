@@ -12,11 +12,19 @@ import type {
 } from "@/lib/types";
 
 export const FOOD_IMAGES = [
-  "/menu/tortilla.jpg",
-  "/menu/tarta.jpeg",
-  "/menu/carne_al_horno.jpeg",
+  "/menu/sorrentinos-jamon-queso.jpg",
+  "/menu/sorrentinos-ricota-espinaca.jpg",
+  "/menu/pollo-crema-papas.jpg",
+  "/menu/suprema-napolitana.jpg",
+  "/menu/carre-cerdo-pizza.jpg",
   "/menu/canelones.jpeg",
+  "/menu/carne_al_horno.jpeg",
   "/menu/guiso.jpeg",
+  "/menu/tarta.jpeg",
+  "/menu/tarta-humita.jpg",
+  "/menu/tarta-verdura.jpg",
+  "/menu/tarta-pollo-puerro.jpg",
+  "/menu/tortilla.jpg",
   "/menu/bondiola.jpg",
   "/menu/osobuco.jpg",
   "/menu/pollo-disco.jpg",
@@ -240,17 +248,9 @@ export function parseStore(input: unknown): Store {
     paymentNote: text(input.paymentNote, 300),
     categories,
     dishes,
+    created_at: text(input.created_at, 40) || nowIso,
+    updated_at: text(input.updated_at, 40) || nowIso,
   };
-
-  const createdAt = text(input.created_at, 40);
-  if (createdAt) {
-    result.created_at = createdAt;
-  }
-
-  const updatedAt = text(input.updated_at, 40);
-  if (updatedAt) {
-    result.updated_at = updatedAt;
-  }
 
   if (deliverySchedule) {
     result.deliverySchedule = deliverySchedule;
